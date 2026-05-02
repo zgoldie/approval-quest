@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>APP STORE QUEST</title>
+<title>Approval Quest</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
 
@@ -264,7 +264,7 @@
 <div class="terminal">
 
   <div class="title-block">
-    <h1>APP STORE QUEST</h1>
+    <h1>APPROVAL QUEST</h1>
     <div class="subtitle">a text adventure in bureaucratic suffering</div>
   </div>
 
@@ -298,11 +298,11 @@ const nodes = {
   intro: {
     progress: 0,
     lines: [
-      { text: 'INITIALISING APP STORE QUEST v1.0.0...', cls: 'system', delay: 0 },
+      { text: 'INITIALISING APPROVAL QUEST v1.0.0...', cls: 'system', delay: 0 },
       { text: '', cls: 'gap', delay: 200 },
       { text: 'THE YEAR: NOW.', cls: 'dim', delay: 400 },
-      { text: 'THE BUG: A button says "Submitt Order".', cls: 'bright', delay: 700 },
-      { text: 'THE FIX: Remove one T. Two lines of code. Done in 4 minutes.', cls: 'bright', delay: 1000 },
+      { text: 'THE BUG: Signup finishes in the UI, then the spinner never stops.', cls: 'bright', delay: 700 },
+      { text: 'THE FIX: A missing await on the session call. One line. Done in twelve minutes.', cls: 'bright', delay: 1000 },
       { text: '', cls: 'gap', delay: 1300 },
       { text: 'The fix is sitting on your machine, ready.', cls: '', delay: 1500 },
       { text: 'Between it and your users: the App Store review process.', cls: '', delay: 1900 },
@@ -329,7 +329,7 @@ const nodes = {
       { text: '', cls: 'gap', delay: 1500 },
       { text: 'DAY 2', cls: 'big', delay: 1800 },
       { text: '', cls: 'gap', delay: 2000 },
-      { text: '[09:14] Sarah (Product): hey is the button fix live yet?', cls: 'amber', delay: 2200 },
+      { text: '[09:14] Sarah (Product): hey is the signup fix live yet?', cls: 'amber', delay: 2200 },
       { text: '[09:31] Sarah (Product): just checking :)', cls: 'amber', delay: 2600 },
       { text: '[09:32] Sarah (Product): customers are noticing', cls: 'amber', delay: 3000 },
       { text: '', cls: 'gap', delay: 3200 },
@@ -355,11 +355,59 @@ const nodes = {
       { text: '', cls: 'gap', delay: 1500 },
       { text: 'Three hours pass. Your wrist hurts.', cls: 'dim', delay: 1700 },
       { text: '', cls: 'gap', delay: 2000 },
-      { text: 'DAY 2', cls: 'big', delay: 2200 },
-      { text: '', cls: 'gap', delay: 2400 },
-      { text: '[09:14] Sarah (Product): hey is the button fix live yet?', cls: 'amber', delay: 2600 },
-      { text: '[09:31] Sarah (Product): just checking :)', cls: 'amber', delay: 3000 },
-      { text: '[09:32] Sarah (Product): customers are noticing', cls: 'amber', delay: 3400 },
+      { text: 'You open Reddit. The timeline does not care that you are in hell.', cls: 'dim', delay: 2200 },
+      { text: '', cls: 'gap', delay: 2500 },
+      { text: 'r/iOSProgramming: "Vibe coded my entire app in one weekend (AMA)"', cls: 'dim', delay: 2700 },
+      { text: 'r/webdev: "Shipped production with Cursor, zero docs"', cls: 'dim', delay: 3000 },
+      { text: 'r/SideProject: "My vibe-coded SaaS hit $4k MRR"', cls: 'dim', delay: 3300 },
+      { text: 'r/Entrepreneur: "Stop overengineering, just vibe code it"', cls: 'dim', delay: 3600 },
+      { text: '...', cls: 'dim', delay: 3900 },
+      { text: 'You scroll past a hundred posts about vibe coding an app.', cls: 'bright', delay: 4200 },
+      { text: 'None of them mention App Store review. Of course they do not.', cls: 'dim', delay: 4600 },
+      { text: '', cls: 'gap', delay: 5000 },
+      { text: 'What do you do on Reddit?', cls: 'dim', delay: 5300 },
+    ],
+    choices: [
+      { text: 'Post helpful replies: links, gentle corrections, good faith.', next: 'day1_reddit_helpful', sanity: 0, slack: 0, days: 0 },
+      { text: 'Leave snarky comments. The void deserves honesty.', next: 'day1_reddit_snark', sanity: -5, slack: 0, days: 0 },
+    ]
+  },
+
+  day1_reddit_helpful: {
+    progress: 1,
+    lines: [
+      { text: '> You write calm, constructive replies. You link MDN anyway.', cls: 'dim', delay: 0 },
+      { text: 'One thread OP says "thanks actually". The vibe-code posts do not vanish.', cls: '', delay: 500 },
+      { text: 'You feel briefly like a person.', cls: 'dim', delay: 1000 },
+      { text: '', cls: 'gap', delay: 1300 },
+      { text: 'DAY 2', cls: 'big', delay: 1600 },
+      { text: '', cls: 'gap', delay: 1800 },
+      { text: '[09:14] Sarah (Product): hey is the signup fix live yet?', cls: 'amber', delay: 2000 },
+      { text: '[09:31] Sarah (Product): just checking :)', cls: 'amber', delay: 2400 },
+      { text: '[09:32] Sarah (Product): customers are noticing', cls: 'amber', delay: 2800 },
+      { text: '', cls: 'gap', delay: 3000 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 3200 },
+    ],
+    choices: [
+      { text: 'Reply to Sarah: "It\'s in review, nothing I can do."', next: 'day2_explain', sanity: 0, slack: 3, days: 1 },
+      { text: 'Leave Sarah on read. Preserve your energy.', next: 'day2_ignore', sanity: 5, slack: 3, days: 1 },
+    ]
+  },
+
+  day1_reddit_snark: {
+    progress: 1,
+    lines: [
+      { text: '> You let rip. Snark. Touch grass. Read the HIG.', cls: 'dim', delay: 0 },
+      { text: 'Replies arrive faster than your App Store status ever updates.', cls: '', delay: 500 },
+      { text: 'Someone calls you bitter. They are not entirely wrong.', cls: 'red', delay: 1000 },
+      { text: '', cls: 'gap', delay: 1400 },
+      { text: 'DAY 2', cls: 'big', delay: 1700 },
+      { text: '', cls: 'gap', delay: 1900 },
+      { text: '[09:14] Sarah (Product): hey is the signup fix live yet?', cls: 'amber', delay: 2100 },
+      { text: '[09:31] Sarah (Product): just checking :)', cls: 'amber', delay: 2500 },
+      { text: '[09:32] Sarah (Product): customers are noticing', cls: 'amber', delay: 2900 },
+      { text: '', cls: 'gap', delay: 3100 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 3300 },
     ],
     choices: [
       { text: 'Reply to Sarah: "It\'s in review, nothing I can do."', next: 'day2_explain', sanity: 0, slack: 3, days: 1 },
@@ -400,7 +448,7 @@ const nodes = {
       { text: '', cls: 'gap', delay: 400 },
       { text: 'This lasts 11 minutes.', cls: 'dim', delay: 600 },
       { text: '', cls: 'gap', delay: 900 },
-      { text: '[09:43] Marcus (Engineering Manager): Sarah says the fix isn\'t live?', cls: 'amber', delay: 1100 },
+      { text: '[09:43] Marcus (Engineering Manager): Sarah says the signup fix isn\'t live?', cls: 'amber', delay: 1100 },
       { text: '[09:44] Marcus (Engineering Manager): what\'s the hold up', cls: 'amber', delay: 1600 },
       { text: '', cls: 'gap', delay: 1900 },
       { text: 'A notification arrives.', cls: 'bright', delay: 2100 },
@@ -435,13 +483,41 @@ const nodes = {
       { text: 'Tech news: "App Store review times surge 340% as AI app flood continues"', cls: 'dim', delay: 2700 },
       { text: '"Developers report waiting up to 12 days for trivial updates"', cls: 'dim', delay: 3200 },
       { text: '', cls: 'gap', delay: 3500 },
-      { text: '[14:22] Sarah: any update on the update?', cls: 'amber', delay: 3800 },
-      { text: '[14:22] Sarah: haha get it. update on the update', cls: 'amber', delay: 4300 },
-      { text: '', cls: 'gap', delay: 4600 },
-      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 4900 },
+      { text: 'App Store Connect: average rating 4.2 → 3.8 (last 7 days)', cls: 'red', delay: 3700 },
+      { text: 'New 1-star reviews: "won\'t let me sign up" "stuck on loading forever"', cls: 'dim', delay: 4200 },
+      { text: 'Support pastes a screenshot thread in Slack. It is not flattering.', cls: 'dim', delay: 4700 },
+      { text: '', cls: 'gap', delay: 5100 },
+      { text: '[14:22] Sarah: any update on the update?', cls: 'amber', delay: 5400 },
+      { text: '[14:22] Sarah: haha get it. update on the update', cls: 'amber', delay: 5900 },
+      { text: '', cls: 'gap', delay: 6200 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 6500 },
     ],
     choices: [
-      { text: 'Keep waiting. This has to end sometime.', next: 'day4_rejection2', sanity: -15, slack: 0, days: 1 },
+      { text: 'Keep waiting. This has to end sometime.', next: 'day3b_new_request', sanity: -15, slack: 0, days: 1 },
+      { text: 'Discover the CodePush escape hatch.', next: 'codepush_escape', sanity: 50, slack: 0, days: 0 },
+    ]
+  },
+
+  day3b_new_request: {
+    progress: 3,
+    lines: [
+      { text: 'DAY 4', cls: 'big', delay: 0 },
+      { text: '', cls: 'gap', delay: 300 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 500 },
+      { text: 'You allow yourself one cautious breath.', cls: 'dim', delay: 900 },
+      { text: '', cls: 'gap', delay: 1200 },
+      { text: 'APPLE REVIEW TEAM: Your submission has been rejected.', cls: 'red', delay: 1500 },
+      { text: '', cls: 'gap', delay: 1800 },
+      { text: '"Please provide a screen recording of the full signup flow, including OAuth cancel paths."', cls: 'red', delay: 2000 },
+      { text: '', cls: 'gap', delay: 2400 },
+      { text: 'The login issue was already resolved. This is a new request.', cls: 'bright', delay: 2700 },
+      { text: 'You record the video. You narrate in a neutral voice. You upload.', cls: '', delay: 3200 },
+      { text: 'You resubmit. You are back at the end of the queue.', cls: 'dim', delay: 3700 },
+      { text: '', cls: 'gap', delay: 4100 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 4400 },
+    ],
+    choices: [
+      { text: 'Keep waiting. Surely the video is enough.', next: 'day4_rejection2', sanity: -10, slack: 0, days: 1 },
       { text: 'Discover the CodePush escape hatch.', next: 'codepush_escape', sanity: 50, slack: 0, days: 0 },
     ]
   },
@@ -462,8 +538,8 @@ const nodes = {
       { text: '', cls: 'gap', delay: 2800 },
       { text: 'You release it. It\'s live. It\'s finally—', cls: '', delay: 3100 },
       { text: '', cls: 'gap', delay: 3400 },
-      { text: '[16:05] Sarah: this is great! also did you see the checkout bug?', cls: 'amber', delay: 3700 },
-      { text: '[16:05] Sarah: the price rounds wrong on some items', cls: 'amber', delay: 4200 },
+      { text: '[16:05] Sarah: this is great! also did you see the profile photo crop bug?', cls: 'amber', delay: 3700 },
+      { text: '[16:05] Sarah: avatars are getting cropped weird on iPad', cls: 'amber', delay: 4200 },
       { text: '[16:06] Sarah: can we get that fixed today', cls: 'amber', delay: 4600 },
       { text: '', cls: 'gap', delay: 4900 },
       { text: 'The fix will take 20 minutes.', cls: '', delay: 5200 },
@@ -478,7 +554,7 @@ const nodes = {
   day4_rejection2: {
     progress: 4,
     lines: [
-      { text: 'DAY 4', cls: 'big', delay: 0 },
+      { text: 'DAY 5', cls: 'big', delay: 0 },
       { text: '', cls: 'gap', delay: 300 },
       { text: 'APPLE REVIEW TEAM: Your submission has been rejected.', cls: 'red', delay: 500 },
       { text: '', cls: 'gap', delay: 800 },
@@ -488,8 +564,8 @@ const nodes = {
       { text: 'You look at the app.', cls: '', delay: 1900 },
       { text: 'They are identical.', cls: 'bright', delay: 2200 },
       { text: '', cls: 'gap', delay: 2500 },
-      { text: '[11:03] Marcus: CEO is asking about the button thing', cls: 'amber', delay: 2700 },
-      { text: '[11:03] Marcus: he saw it himself apparently', cls: 'amber', delay: 3100 },
+      { text: '[11:03] Marcus: CEO is asking about the signup mess', cls: 'amber', delay: 2700 },
+      { text: '[11:03] Marcus: one-star reviews plus the store delay is not a good look', cls: 'amber', delay: 3100 },
       { text: '', cls: 'gap', delay: 3400 },
       { text: 'Your sanity score has reached a new low.', cls: 'red', delay: 3600 },
     ],
@@ -505,13 +581,13 @@ const nodes = {
       { text: '> You stop. You think.', cls: 'dim', delay: 0 },
       { text: '', cls: 'gap', delay: 400 },
       { text: 'This is a JavaScript bundle change.', cls: 'bright', delay: 700 },
-      { text: 'No native code. No new dependencies. Just two characters.', cls: '', delay: 1200 },
+      { text: 'No native code. No new dependencies. Just the signup promise chain.', cls: '', delay: 1200 },
       { text: '', cls: 'gap', delay: 1500 },
       { text: 'There is a tunnel out of here.', cls: 'bright', delay: 1800 },
       { text: '', cls: 'gap', delay: 2100 },
       { text: '$ codemagic-codepush release-react MyApp-iOS Production', cls: 'system', delay: 2400 },
       { text: '', cls: 'gap', delay: 2700 },
-      { text: 'Releasing update: "Fix Submitt typo" ...', cls: 'dim', delay: 2900 },
+      { text: 'Releasing update: "Fix signup infinite spinner" ...', cls: 'dim', delay: 2900 },
       { text: 'Bundle compiled.', cls: 'dim', delay: 3300 },
       { text: 'Package validated.', cls: 'dim', delay: 3600 },
       { text: 'Uploading to CodePush server...', cls: 'dim', delay: 3900 },
@@ -626,7 +702,7 @@ function showGoodEnding(container) {
       CodePush pushes JS bundle updates directly to your users.<br>
       No review. No queue. No reviewer typing your password wrong.<br>
       <br>
-      Your two-character fix reached production in under a minute.
+      Your signup fix reached production in under a minute.
     </div>
     <div class="cta">
       Ship like this for real →&nbsp;<a href="https://codemagic.io/codepush" target="_blank">codemagic.io/codepush</a>
