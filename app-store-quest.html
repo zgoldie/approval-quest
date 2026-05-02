@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APP STORE QUEST</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+
+  :root {
+    --green: #00ff41;
+    --green-dim: #00aa2a;
+    --green-dark: #003a0e;
+    --green-glow: rgba(0, 255, 65, 0.15);
+    --amber: #ffb700;
+    --red: #ff3131;
+    --bg: #020f04;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* CRT scanline effect */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* CRT vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 99;
+  }
+
+  .terminal {
+    width: 100%;
+    max-width: 720px;
+  }
+
+  .title-block {
+    text-align: center;
+    margin-bottom: 40px;
+    font-family: 'VT323', monospace;
+  }
+
+  .title-block h1 {
+    font-size: clamp(36px, 8vw, 72px);
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green), 0 0 40px var(--green-dim);
+    letter-spacing: 4px;
+    animation: flicker 8s infinite;
+  }
+
+  .title-block .subtitle {
+    font-size: 18px;
+    color: var(--green-dim);
+    margin-top: 4px;
+    letter-spacing: 2px;
+  }
+
+  @keyframes flicker {
+    0%, 95%, 100% { opacity: 1; }
+    96% { opacity: 0.7; }
+    97% { opacity: 1; }
+    98% { opacity: 0.5; }
+    99% { opacity: 1; }
+  }
+
+  .output {
+    min-height: 300px;
+    margin-bottom: 24px;
+    line-height: 1.8;
+    font-size: 15px;
+  }
+
+  .line {
+    opacity: 0;
+    animation: appear 0.05s forwards;
+    padding: 2px 0;
+  }
+
+  .line.dim { color: var(--green-dim); }
+  .line.bright { color: #fff; text-shadow: 0 0 8px var(--green); }
+  .line.amber { color: var(--amber); }
+  .line.red { color: var(--red); }
+  .line.system { color: var(--green-dim); font-size: 13px; }
+  .line.gap { height: 12px; }
+  .line.big {
+    font-family: 'VT323', monospace;
+    font-size: 28px;
+    color: var(--green);
+    text-shadow: 0 0 10px var(--green);
+  }
+
+  @keyframes appear {
+    to { opacity: 1; }
+  }
+
+  .prompt {
+    color: var(--green-dim);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .choice-btn {
+    background: transparent;
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    padding: 10px 16px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .choice-btn::before {
+    content: '> ';
+    color: var(--green-dim);
+  }
+
+  .choice-btn:hover {
+    border-color: var(--green);
+    background: var(--green-glow);
+    color: #fff;
+    text-shadow: 0 0 8px var(--green);
+    box-shadow: 0 0 12px var(--green-glow), inset 0 0 12px var(--green-glow);
+  }
+
+  .choice-btn:active {
+    transform: scale(0.99);
+  }
+
+  .status-bar {
+    display: flex;
+    gap: 24px;
+    border-top: 1px solid var(--green-dark);
+    border-bottom: 1px solid var(--green-dark);
+    padding: 8px 0;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: var(--green-dim);
+  }
+
+  .status-bar span b {
+    color: var(--green);
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 10px;
+    height: 16px;
+    background: var(--green);
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  .ending-box {
+    border: 1px solid var(--green);
+    padding: 20px;
+    margin-top: 16px;
+    box-shadow: 0 0 20px var(--green-glow), inset 0 0 20px var(--green-glow);
+    text-align: center;
+  }
+
+  .ending-box.bad {
+    border-color: var(--red);
+    box-shadow: 0 0 20px rgba(255,49,49,0.2), inset 0 0 20px rgba(255,49,49,0.1);
+  }
+
+  .ending-box .cta {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--green-dim);
+  }
+
+  .ending-box .cta a {
+    color: var(--green);
+    text-decoration: none;
+  }
+
+  .restart-btn {
+    background: transparent;
+    border: 1px solid var(--green-dim);
+    color: var(--green-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 8px 20px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: all 0.15s;
+  }
+
+  .restart-btn:hover {
+    color: var(--green);
+    border-color: var(--green);
+    background: var(--green-glow);
+  }
+
+  .progress-track {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+  }
+
+  .progress-pip {
+    width: 24px;
+    height: 4px;
+    background: var(--green-dark);
+    border: 1px solid var(--green-dim);
+  }
+
+  .progress-pip.done {
+    background: var(--green-dim);
+  }
+
+  .progress-pip.current {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+</style>
+</head>
+<body>
+<div class="terminal">
+
+  <div class="title-block">
+    <h1>APP STORE QUEST</h1>
+    <div class="subtitle">a text adventure in bureaucratic suffering</div>
+  </div>
+
+  <div class="status-bar">
+    <span>DAY <b id="stat-day">1</b></span>
+    <span>SANITY <b id="stat-sanity">100%</b></span>
+    <span>SLACK MESSAGES <b id="stat-slack">0</b></span>
+    <span>BUG FIX <b id="stat-fix">READY</b></span>
+  </div>
+
+  <div class="progress-track" id="progress-track"></div>
+
+  <div class="output" id="output"></div>
+
+  <div id="choices" class="choices"></div>
+
+</div>
+
+<script>
+const state = {
+  day: 1,
+  sanity: 100,
+  slack: 0,
+  node: 'intro'
+};
+
+const TOTAL_NODES = 7;
+
+const nodes = {
+
+  intro: {
+    progress: 0,
+    lines: [
+      { text: 'INITIALISING APP STORE QUEST v1.0.0...', cls: 'system', delay: 0 },
+      { text: '', cls: 'gap', delay: 200 },
+      { text: 'THE YEAR: NOW.', cls: 'dim', delay: 400 },
+      { text: 'THE BUG: A button says "Submitt Order".', cls: 'bright', delay: 700 },
+      { text: 'THE FIX: Remove one T. Two lines of code. Done in 4 minutes.', cls: 'bright', delay: 1000 },
+      { text: '', cls: 'gap', delay: 1300 },
+      { text: 'The fix is sitting on your machine, ready.', cls: '', delay: 1500 },
+      { text: 'Between it and your users: the App Store review process.', cls: '', delay: 1900 },
+      { text: '', cls: 'gap', delay: 2200 },
+      { text: 'You submit the update.', cls: 'amber', delay: 2500 },
+      { text: 'Status: IN REVIEW', cls: 'dim', delay: 2900 },
+      { text: '', cls: 'gap', delay: 3100 },
+      { text: 'What do you do?', cls: 'dim', delay: 3400 },
+    ],
+    choices: [
+      { text: 'Get a coffee. It\'ll be approved by the time you\'re back.', next: 'day1_wait', sanity: 0, slack: 0, days: 0 },
+      { text: 'Check the review status. Refresh. Refresh again.', next: 'day1_refresh', sanity: -5, slack: 0, days: 0 },
+    ]
+  },
+
+  day1_wait: {
+    progress: 1,
+    lines: [
+      { text: '> You get a coffee.', cls: 'dim', delay: 0 },
+      { text: '', cls: 'gap', delay: 200 },
+      { text: 'You return. Status: IN REVIEW.', cls: '', delay: 400 },
+      { text: 'You eat lunch. Status: IN REVIEW.', cls: '', delay: 800 },
+      { text: 'You go home. Status: IN REVIEW.', cls: '', delay: 1200 },
+      { text: '', cls: 'gap', delay: 1500 },
+      { text: 'DAY 2', cls: 'big', delay: 1800 },
+      { text: '', cls: 'gap', delay: 2000 },
+      { text: '[09:14] Sarah (Product): hey is the button fix live yet?', cls: 'amber', delay: 2200 },
+      { text: '[09:31] Sarah (Product): just checking :)', cls: 'amber', delay: 2600 },
+      { text: '[09:32] Sarah (Product): customers are noticing', cls: 'amber', delay: 3000 },
+      { text: '', cls: 'gap', delay: 3200 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 3400 },
+    ],
+    choices: [
+      { text: 'Reply to Sarah: "It\'s in review, nothing I can do."', next: 'day2_explain', sanity: 0, slack: 3, days: 1 },
+      { text: 'Leave Sarah on read. Preserve your energy.', next: 'day2_ignore', sanity: 5, slack: 3, days: 1 },
+    ]
+  },
+
+  day1_refresh: {
+    progress: 1,
+    lines: [
+      { text: '> You refresh the status page.', cls: 'dim', delay: 0 },
+      { text: '', cls: 'gap', delay: 300 },
+      { text: 'IN REVIEW.', cls: '', delay: 500 },
+      { text: 'IN REVIEW.', cls: '', delay: 900 },
+      { text: 'IN REVIEW.', cls: '', delay: 1100 },
+      { text: 'IN REVIEW.', cls: '', delay: 1200 },
+      { text: 'IN REVIEW.', cls: '', delay: 1280 },
+      { text: 'IN REVIEW.', cls: '', delay: 1340 },
+      { text: '', cls: 'gap', delay: 1500 },
+      { text: 'Three hours pass. Your wrist hurts.', cls: 'dim', delay: 1700 },
+      { text: '', cls: 'gap', delay: 2000 },
+      { text: 'DAY 2', cls: 'big', delay: 2200 },
+      { text: '', cls: 'gap', delay: 2400 },
+      { text: '[09:14] Sarah (Product): hey is the button fix live yet?', cls: 'amber', delay: 2600 },
+      { text: '[09:31] Sarah (Product): just checking :)', cls: 'amber', delay: 3000 },
+      { text: '[09:32] Sarah (Product): customers are noticing', cls: 'amber', delay: 3400 },
+    ],
+    choices: [
+      { text: 'Reply to Sarah: "It\'s in review, nothing I can do."', next: 'day2_explain', sanity: 0, slack: 3, days: 1 },
+      { text: 'Leave Sarah on read. Preserve your energy.', next: 'day2_ignore', sanity: 5, slack: 3, days: 1 },
+    ]
+  },
+
+  day2_explain: {
+    progress: 2,
+    lines: [
+      { text: '> You explain the review process to Sarah. Again.', cls: 'dim', delay: 0 },
+      { text: '', cls: 'gap', delay: 400 },
+      { text: '[09:35] You: It\'s with Apple. Review takes 1-3 days. No ETA.', cls: '', delay: 600 },
+      { text: '[09:36] Sarah: oh right. can\'t you like... speed it up?', cls: 'amber', delay: 1200 },
+      { text: '', cls: 'gap', delay: 1500 },
+      { text: 'You stare at the ceiling for a moment.', cls: 'dim', delay: 1700 },
+      { text: '', cls: 'gap', delay: 2000 },
+      { text: 'Then: a notification.', cls: 'bright', delay: 2300 },
+      { text: '', cls: 'gap', delay: 2500 },
+      { text: 'APPLE REVIEW TEAM: Your submission has been rejected.', cls: 'red', delay: 2700 },
+      { text: '', cls: 'gap', delay: 3000 },
+      { text: '"We were unable to log in using the credentials provided."', cls: 'red', delay: 3200 },
+      { text: '', cls: 'gap', delay: 3500 },
+      { text: 'You check the logs. The reviewer typed "passw0rd" not "password".', cls: 'bright', delay: 3700 },
+      { text: 'Your credentials were correct. The reviewer\'s fingers were not.', cls: '', delay: 4200 },
+    ],
+    choices: [
+      { text: 'Reply politely: "The credentials are correct. Please retry."', next: 'day3_polite', sanity: -10, slack: 0, days: 1 },
+      { text: 'Reply less politely. Attach the logs. Express yourself.', next: 'day3_logs', sanity: 5, slack: 1, days: 1 },
+      { text: 'Discover the CodePush escape hatch.', next: 'codepush_escape', sanity: 50, slack: 0, days: 0 },
+    ]
+  },
+
+  day2_ignore: {
+    progress: 2,
+    lines: [
+      { text: '> You leave Sarah on read.', cls: 'dim', delay: 0 },
+      { text: '', cls: 'gap', delay: 400 },
+      { text: 'This lasts 11 minutes.', cls: 'dim', delay: 600 },
+      { text: '', cls: 'gap', delay: 900 },
+      { text: '[09:43] Marcus (Engineering Manager): Sarah says the fix isn\'t live?', cls: 'amber', delay: 1100 },
+      { text: '[09:44] Marcus (Engineering Manager): what\'s the hold up', cls: 'amber', delay: 1600 },
+      { text: '', cls: 'gap', delay: 1900 },
+      { text: 'A notification arrives.', cls: 'bright', delay: 2100 },
+      { text: '', cls: 'gap', delay: 2400 },
+      { text: 'APPLE REVIEW TEAM: Your submission has been rejected.', cls: 'red', delay: 2600 },
+      { text: '', cls: 'gap', delay: 2900 },
+      { text: '"We were unable to log in using the credentials provided."', cls: 'red', delay: 3100 },
+      { text: '', cls: 'gap', delay: 3400 },
+      { text: 'You check the logs. The reviewer typed "passw0rd" not "password".', cls: 'bright', delay: 3600 },
+      { text: 'A zero. In place of the O. You double-check. Yes.', cls: '', delay: 4100 },
+    ],
+    choices: [
+      { text: 'Reply politely: "The credentials are correct. Please retry."', next: 'day3_polite', sanity: -10, slack: 0, days: 1 },
+      { text: 'Reply less politely. Attach the logs. Express yourself.', next: 'day3_logs', sanity: 5, slack: 1, days: 1 },
+      { text: 'Discover the CodePush escape hatch.', next: 'codepush_escape', sanity: 50, slack: 0, days: 0 },
+    ]
+  },
+
+  day3_polite: {
+    progress: 3,
+    lines: [
+      { text: '> You compose a polite reply.', cls: 'dim', delay: 0 },
+      { text: '> You rewrite it twice to remove the sarcasm.', cls: 'dim', delay: 400 },
+      { text: '', cls: 'gap', delay: 700 },
+      { text: 'You resubmit.', cls: 'amber', delay: 900 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 1200 },
+      { text: '', cls: 'gap', delay: 1500 },
+      { text: 'You are back at the end of the queue.', cls: '', delay: 1700 },
+      { text: '', cls: 'gap', delay: 2000 },
+      { text: 'DAY 3', cls: 'big', delay: 2300 },
+      { text: '', cls: 'gap', delay: 2500 },
+      { text: 'Tech news: "App Store review times surge 340% as AI app flood continues"', cls: 'dim', delay: 2700 },
+      { text: '"Developers report waiting up to 12 days for trivial updates"', cls: 'dim', delay: 3200 },
+      { text: '', cls: 'gap', delay: 3500 },
+      { text: '[14:22] Sarah: any update on the update?', cls: 'amber', delay: 3800 },
+      { text: '[14:22] Sarah: haha get it. update on the update', cls: 'amber', delay: 4300 },
+      { text: '', cls: 'gap', delay: 4600 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 4900 },
+    ],
+    choices: [
+      { text: 'Keep waiting. This has to end sometime.', next: 'day4_rejection2', sanity: -15, slack: 0, days: 1 },
+      { text: 'Discover the CodePush escape hatch.', next: 'codepush_escape', sanity: 50, slack: 0, days: 0 },
+    ]
+  },
+
+  day3_logs: {
+    progress: 3,
+    lines: [
+      { text: '> You attach the logs. You express yourself.', cls: 'dim', delay: 0 },
+      { text: '> You delete the last sentence. Reattach the logs.', cls: 'dim', delay: 500 },
+      { text: '', cls: 'gap', delay: 800 },
+      { text: 'You resubmit.', cls: 'amber', delay: 1000 },
+      { text: '', cls: 'gap', delay: 1300 },
+      { text: 'DAY 3', cls: 'big', delay: 1600 },
+      { text: '', cls: 'gap', delay: 1800 },
+      { text: 'Approved! New reviewer. Credentials worked fine.', cls: 'bright', delay: 2000 },
+      { text: '', cls: 'gap', delay: 2300 },
+      { text: 'Status: PENDING DEVELOPER RELEASE', cls: 'amber', delay: 2500 },
+      { text: '', cls: 'gap', delay: 2800 },
+      { text: 'You release it. It\'s live. It\'s finally—', cls: '', delay: 3100 },
+      { text: '', cls: 'gap', delay: 3400 },
+      { text: '[16:05] Sarah: this is great! also did you see the checkout bug?', cls: 'amber', delay: 3700 },
+      { text: '[16:05] Sarah: the price rounds wrong on some items', cls: 'amber', delay: 4200 },
+      { text: '[16:06] Sarah: can we get that fixed today', cls: 'amber', delay: 4600 },
+      { text: '', cls: 'gap', delay: 4900 },
+      { text: 'The fix will take 20 minutes.', cls: '', delay: 5200 },
+      { text: 'The review will take... you already know.', cls: 'dim', delay: 5600 },
+    ],
+    choices: [
+      { text: 'Submit to App Store. You know the drill.', next: 'bad_ending', sanity: -30, slack: 2, days: 1 },
+      { text: 'There has to be a better way.', next: 'codepush_escape', sanity: 0, slack: 0, days: 0 },
+    ]
+  },
+
+  day4_rejection2: {
+    progress: 4,
+    lines: [
+      { text: 'DAY 4', cls: 'big', delay: 0 },
+      { text: '', cls: 'gap', delay: 300 },
+      { text: 'APPLE REVIEW TEAM: Your submission has been rejected.', cls: 'red', delay: 500 },
+      { text: '', cls: 'gap', delay: 800 },
+      { text: '"Screenshots do not accurately reflect the current app UI."', cls: 'red', delay: 1000 },
+      { text: '', cls: 'gap', delay: 1300 },
+      { text: 'You look at the screenshots.', cls: '', delay: 1500 },
+      { text: 'You look at the app.', cls: '', delay: 1900 },
+      { text: 'They are identical.', cls: 'bright', delay: 2200 },
+      { text: '', cls: 'gap', delay: 2500 },
+      { text: '[11:03] Marcus: CEO is asking about the button thing', cls: 'amber', delay: 2700 },
+      { text: '[11:03] Marcus: he saw it himself apparently', cls: 'amber', delay: 3100 },
+      { text: '', cls: 'gap', delay: 3400 },
+      { text: 'Your sanity score has reached a new low.', cls: 'red', delay: 3600 },
+    ],
+    choices: [
+      { text: 'Retake the screenshots. Resubmit. Reset the clock.', next: 'bad_ending', sanity: -20, slack: 1, days: 1 },
+      { text: 'There has to be a better way.', next: 'codepush_escape', sanity: 0, slack: 0, days: 0 },
+    ]
+  },
+
+  codepush_escape: {
+    progress: 5,
+    lines: [
+      { text: '> You stop. You think.', cls: 'dim', delay: 0 },
+      { text: '', cls: 'gap', delay: 400 },
+      { text: 'This is a JavaScript bundle change.', cls: 'bright', delay: 700 },
+      { text: 'No native code. No new dependencies. Just two characters.', cls: '', delay: 1200 },
+      { text: '', cls: 'gap', delay: 1500 },
+      { text: 'There is a tunnel out of here.', cls: 'bright', delay: 1800 },
+      { text: '', cls: 'gap', delay: 2100 },
+      { text: '$ codemagic-codepush release-react MyApp-iOS Production', cls: 'system', delay: 2400 },
+      { text: '', cls: 'gap', delay: 2700 },
+      { text: 'Releasing update: "Fix Submitt typo" ...', cls: 'dim', delay: 2900 },
+      { text: 'Bundle compiled.', cls: 'dim', delay: 3300 },
+      { text: 'Package validated.', cls: 'dim', delay: 3600 },
+      { text: 'Uploading to CodePush server...', cls: 'dim', delay: 3900 },
+      { text: '', cls: 'gap', delay: 4200 },
+      { text: 'Successfully released update.', cls: 'bright', delay: 4500 },
+      { text: 'Rollout: 100% of users.', cls: 'bright', delay: 4900 },
+      { text: '', cls: 'gap', delay: 5200 },
+      { text: 'Time elapsed: 47 seconds.', cls: 'bright', delay: 5500 },
+      { text: 'Reviewer errors encountered: 0', cls: 'bright', delay: 5900 },
+      { text: 'Colleagues disappointed: 0', cls: 'bright', delay: 6200 },
+      { text: 'Screenshots disputed: 0', cls: 'bright', delay: 6500 },
+      { text: '', cls: 'gap', delay: 6800 },
+      { text: '[09:51] Sarah: omg it\'s fixed!!', cls: 'amber', delay: 7100 },
+    ],
+    choices: [],
+    ending: 'good'
+  },
+
+  bad_ending: {
+    progress: 6,
+    lines: [
+      { text: 'You resubmit.', cls: 'dim', delay: 0 },
+      { text: '', cls: 'gap', delay: 400 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 700 },
+      { text: '', cls: 'gap', delay: 1000 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 1600 },
+      { text: '', cls: 'gap', delay: 1900 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 2300 },
+      { text: '', cls: 'gap', delay: 2600 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 2800 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 2950 },
+      { text: 'Status: IN REVIEW.', cls: 'dim', delay: 3050 },
+      { text: '', cls: 'gap', delay: 3300 },
+      { text: 'You are still here.', cls: 'red', delay: 3600 },
+      { text: 'You will always be here.', cls: 'red', delay: 4000 },
+      { text: '', cls: 'gap', delay: 4300 },
+      { text: 'GAME OVER', cls: 'big', delay: 4600 },
+    ],
+    choices: [],
+    ending: 'bad'
+  }
+
+};
+
+function updateStats(nodeId) {
+  document.getElementById('stat-day').textContent = state.day;
+  document.getElementById('stat-sanity').textContent = Math.max(0, state.sanity) + '%';
+  document.getElementById('stat-slack').textContent = state.slack;
+}
+
+function updateProgress(step) {
+  const track = document.getElementById('progress-track');
+  track.innerHTML = '';
+  for (let i = 0; i < TOTAL_NODES; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'progress-pip' + (i < step ? ' done' : i === step ? ' current' : '');
+    track.appendChild(pip);
+  }
+}
+
+function renderNode(nodeId) {
+  const node = nodes[nodeId];
+  state.node = nodeId;
+  updateProgress(node.progress);
+
+  const output = document.getElementById('output');
+  const choicesEl = document.getElementById('choices');
+  output.innerHTML = '';
+  choicesEl.innerHTML = '';
+
+  let maxDelay = 0;
+
+  node.lines.forEach(line => {
+    const div = document.createElement('div');
+    div.className = 'line' + (line.cls ? ' ' + line.cls : '');
+    div.textContent = line.text;
+    div.style.animationDelay = line.delay + 'ms';
+    output.appendChild(div);
+    maxDelay = Math.max(maxDelay, line.delay + 100);
+  });
+
+  setTimeout(() => {
+    if (node.ending === 'good') {
+      showGoodEnding(choicesEl);
+    } else if (node.ending === 'bad') {
+      showBadEnding(choicesEl);
+    } else {
+      node.choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = choice.text;
+        btn.onclick = () => {
+          state.day += choice.days || 0;
+          state.sanity += choice.sanity || 0;
+          state.slack += choice.slack || 0;
+          updateStats();
+          renderNode(choice.next);
+        };
+        choicesEl.appendChild(btn);
+      });
+    }
+  }, maxDelay + 400);
+}
+
+function showGoodEnding(container) {
+  const box = document.createElement('div');
+  box.className = 'ending-box';
+  box.innerHTML = `
+    <div class="line big" style="opacity:1">YOU ESCAPED</div>
+    <br>
+    <div style="color: var(--green-dim); line-height: 1.8; font-size: 14px;">
+      CodePush pushes JS bundle updates directly to your users.<br>
+      No review. No queue. No reviewer typing your password wrong.<br>
+      <br>
+      Your two-character fix reached production in under a minute.
+    </div>
+    <div class="cta">
+      Ship like this for real →&nbsp;<a href="https://codemagic.io/codepush" target="_blank">codemagic.io/codepush</a>
+    </div>
+    <br>
+    <button class="restart-btn" onclick="restartGame()">[ PLAY AGAIN ]</button>
+  `;
+  container.appendChild(box);
+}
+
+function showBadEnding(container) {
+  const box = document.createElement('div');
+  box.className = 'ending-box bad';
+  box.innerHTML = `
+    <div class="line big" style="opacity:1; color: var(--red);">STILL IN REVIEW</div>
+    <br>
+    <div style="color: var(--green-dim); line-height: 1.8; font-size: 14px;">
+      This didn't have to happen.<br>
+      For JS bundle changes, CodePush bypasses the store entirely.<br>
+      <br>
+      Your fix could have shipped in seconds.
+    </div>
+    <div class="cta">
+      There is a better way →&nbsp;<a href="https://codemagic.io/codepush" target="_blank">codemagic.io/codepush</a>
+    </div>
+    <br>
+    <button class="restart-btn" onclick="restartGame()">[ TRY AGAIN ]</button>
+  `;
+  container.appendChild(box);
+}
+
+function restartGame() {
+  state.day = 1;
+  state.sanity = 100;
+  state.slack = 0;
+  renderNode('intro');
+  updateStats();
+}
+
+restartGame();
+</script>
+</body>
+</html>
