@@ -97,12 +97,15 @@
     margin-bottom: 24px;
     line-height: 1.8;
     font-size: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
   }
 
   .line {
     opacity: 0;
     animation: appear 0.05s forwards;
-    padding: 2px 0;
+    padding: 3px 0;
   }
 
   .line.dim { color: var(--green-dim); }
@@ -293,16 +296,50 @@ const state = {
 
 const TOTAL_NODES = 6;
 
-function gap(ms) {
-  return { text: '', cls: 'gap', delay: ms };
+/** Default ms after each line (content, gap row, IN REVIEW., etc.). */
+const LINE_MS = 380;
+
+/** Story line: `hold` adds extra LINE_MS pauses after this line. */
+function L(text, cls = '', hold = 0) {
+  return { text, cls, hold };
 }
 
-function inReview(delay) {
-  return { text: 'IN REVIEW.', cls: '', delay };
+function G() {
+  return { _g: true };
 }
 
-function statusInReview(delay) {
-  return { text: 'Status: IN REVIEW.', cls: 'dim', delay };
+function IR() {
+  return { _ir: true };
+}
+
+function SR() {
+  return { _sr: true };
+}
+
+function expandLines(raw) {
+  let t = 0;
+  const out = [];
+  for (const item of raw) {
+    if (item && item._g) {
+      out.push({ text: '', cls: 'gap', delay: t });
+      t += LINE_MS;
+      continue;
+    }
+    if (item && item._ir) {
+      out.push({ text: 'IN REVIEW.', cls: '', delay: t });
+      t += LINE_MS;
+      continue;
+    }
+    if (item && item._sr) {
+      out.push({ text: 'Status: IN REVIEW.', cls: 'dim', delay: t });
+      t += LINE_MS;
+      continue;
+    }
+    const hold = item.hold || 0;
+    out.push({ text: item.text, cls: item.cls || '', delay: t });
+    t += LINE_MS + hold * LINE_MS;
+  }
+  return out;
 }
 
 const nodes = {
@@ -310,19 +347,18 @@ const nodes = {
   intro: {
     progress: 0,
     lines: [
-      { text: 'INITIALISING APPROVAL QUEST v1.0.0...', cls: 'system', delay: 0 },
-      gap(200),
-      { text: 'THE YEAR: NOW.', cls: 'dim', delay: 400 },
-      { text: 'THE BUG: Signup finishes in the UI, then the spinner never stops.', cls: 'bright', delay: 700 },
-      { text: 'THE FIX: A missing await on the session call. One line. Done in twelve minutes.', cls: 'bright', delay: 1000 },
-      gap(1300),
-      { text: 'The fix is sitting on your machine, ready.', cls: '', delay: 1500 },
-      { text: 'Between it and your users: the App Store review process.', cls: '', delay: 1900 },
-      gap(2200),
-      { text: 'You submit the update.', cls: 'amber', delay: 2500 },
-      statusInReview(2900),
-      gap(3100),
-      { text: 'What do you do?', cls: 'dim', delay: 3400 },
+      L('INITIALISING APPROVAL QUEST v1.0.0...', 'system'),
+      G(),
+      L('THE YEAR: NOW.', 'dim'),
+      L('THE BUG: Signup finishes in the UI, then the spinner never stops.', 'bright'),
+      L('THE FIX: A missing await on the session call. One line. Done in twelve minutes.', 'bright'),
+      L('The fix is sitting on your machine, ready.'),
+      L('Between it and your users: the App Store review process.'),
+      G(),
+      L('You submit the update.', 'amber'),
+      SR(),
+      G(),
+      L('What do you do?', 'dim'),
     ],
     choices: [
       { text: 'Get a coffee. It\'ll be approved by the time you\'re back.', next: 'day1_wait', sanity: 0, slack: 0, days: 0 },
@@ -333,19 +369,16 @@ const nodes = {
   day1_wait: {
     progress: 1,
     lines: [
-      { text: '> You get a coffee.', cls: 'dim', delay: 0 },
-      gap(200),
-      { text: 'You return. Status: IN REVIEW.', cls: '', delay: 400 },
-      { text: 'You eat lunch. Status: IN REVIEW.', cls: '', delay: 800 },
-      { text: 'You go home. Status: IN REVIEW.', cls: '', delay: 1200 },
-      gap(1500),
-      { text: 'DAY 2', cls: 'big', delay: 1800 },
-      gap(2000),
-      { text: '[09:14] Sarah (Product): hey is the signup fix live yet?', cls: 'amber', delay: 2200 },
-      { text: '[09:31] Sarah (Product): just checking :)', cls: 'amber', delay: 2600 },
-      { text: '[09:32] Sarah (Product): customers are noticing', cls: 'amber', delay: 3000 },
-      gap(3200),
-      statusInReview(3400),
+      L('> You get a coffee.', 'dim'),
+      L('You return. Status: IN REVIEW.'),
+      L('You eat lunch. Status: IN REVIEW.'),
+      L('You go home. Status: IN REVIEW.'),
+      G(),
+      L('DAY 2', 'big'),
+      L('[09:14] Sarah (Product): hey is the signup fix live yet?', 'amber'),
+      L('[09:31] Sarah (Product): just checking :)', 'amber'),
+      L('[09:32] Sarah (Product): customers are noticing', 'amber'),
+      SR(),
     ],
     choices: [
       { text: 'Reply to Sarah: "It\'s in review, nothing I can do."', next: 'day2_explain', sanity: 0, slack: 3, days: 1 },
@@ -356,28 +389,23 @@ const nodes = {
   day1_refresh: {
     progress: 1,
     lines: [
-      { text: '> You refresh the status page.', cls: 'dim', delay: 0 },
-      gap(300),
-      inReview(500),
-      inReview(900),
-      inReview(1100),
-      inReview(1200),
-      inReview(1280),
-      inReview(1340),
-      gap(1500),
-      { text: 'Three hours pass. Your wrist hurts.', cls: 'dim', delay: 1700 },
-      gap(2000),
-      { text: 'You open Reddit. The timeline does not care that you are in hell.', cls: 'dim', delay: 2200 },
-      gap(2500),
-      { text: 'r/iOSProgramming: "Vibe coded my entire app in one weekend (AMA)"', cls: 'dim', delay: 2700 },
-      { text: 'r/webdev: "Shipped production with Cursor, zero docs"', cls: 'dim', delay: 3000 },
-      { text: 'r/SideProject: "My vibe-coded SaaS hit $4k MRR"', cls: 'dim', delay: 3300 },
-      { text: 'r/Entrepreneur: "Stop overengineering, just vibe code it"', cls: 'dim', delay: 3600 },
-      { text: '...', cls: 'dim', delay: 3900 },
-      { text: 'You scroll past a hundred posts about vibe coding an app.', cls: 'bright', delay: 4200 },
-      { text: 'None of them mention App Store review. Of course they do not.', cls: 'dim', delay: 4600 },
-      gap(5000),
-      { text: 'What do you do on Reddit?', cls: 'dim', delay: 5300 },
+      L('> You refresh the status page.', 'dim'),
+      G(),
+      IR(), IR(), IR(), IR(), IR(), IR(),
+      G(),
+      L('Three hours pass. Your wrist hurts.', 'dim'),
+      G(),
+      L('You open Reddit. The timeline does not care that you are in hell.', 'dim'),
+      G(),
+      L('r/iOSProgramming: "Vibe coded my entire app in one weekend (AMA)"', 'dim'),
+      L('r/webdev: "Shipped production with Cursor, zero docs"', 'dim'),
+      L('r/SideProject: "My vibe-coded SaaS hit $4k MRR"', 'dim'),
+      L('r/Entrepreneur: "Stop overengineering, just vibe code it"', 'dim'),
+      L('...', 'dim'),
+      L('You scroll past a hundred posts about vibe coding an app.', 'bright'),
+      L('None of them mention App Store review. Of course they do not.', 'dim'),
+      G(),
+      L('What do you do on Reddit?', 'dim'),
     ],
     choices: [
       { text: 'Post helpful replies: links, gentle corrections, good faith.', next: 'day1_reddit_helpful', sanity: 0, slack: 0, days: 0 },
@@ -388,17 +416,15 @@ const nodes = {
   day1_reddit_helpful: {
     progress: 1,
     lines: [
-      { text: '> You write calm, constructive replies. You link MDN anyway.', cls: 'dim', delay: 0 },
-      { text: 'One thread OP says "thanks actually". The vibe-code posts do not vanish.', cls: '', delay: 500 },
-      { text: 'You feel briefly like a person.', cls: 'dim', delay: 1000 },
-      gap(1300),
-      { text: 'DAY 2', cls: 'big', delay: 1600 },
-      gap(1800),
-      { text: '[09:14] Sarah (Product): hey is the signup fix live yet?', cls: 'amber', delay: 2000 },
-      { text: '[09:31] Sarah (Product): just checking :)', cls: 'amber', delay: 2400 },
-      { text: '[09:32] Sarah (Product): customers are noticing', cls: 'amber', delay: 2800 },
-      gap(3000),
-      statusInReview(3200),
+      L('> You write calm, constructive replies. You link MDN anyway.', 'dim'),
+      L('One thread OP says "thanks actually". The vibe-code posts do not vanish.'),
+      L('You feel briefly like a person.', 'dim'),
+      G(),
+      L('DAY 2', 'big'),
+      L('[09:14] Sarah (Product): hey is the signup fix live yet?', 'amber'),
+      L('[09:31] Sarah (Product): just checking :)', 'amber'),
+      L('[09:32] Sarah (Product): customers are noticing', 'amber'),
+      SR(),
     ],
     choices: [
       { text: 'Reply to Sarah: "It\'s in review, nothing I can do."', next: 'day2_explain', sanity: 0, slack: 3, days: 1 },
@@ -409,17 +435,15 @@ const nodes = {
   day1_reddit_snark: {
     progress: 1,
     lines: [
-      { text: '> You let rip. Snark. Touch grass. Read the HIG.', cls: 'dim', delay: 0 },
-      { text: 'Replies arrive faster than your App Store status ever updates.', cls: '', delay: 500 },
-      { text: 'Someone calls you bitter. They are not entirely wrong.', cls: 'red', delay: 1000 },
-      gap(1400),
-      { text: 'DAY 2', cls: 'big', delay: 1700 },
-      gap(1900),
-      { text: '[09:14] Sarah (Product): hey is the signup fix live yet?', cls: 'amber', delay: 2100 },
-      { text: '[09:31] Sarah (Product): just checking :)', cls: 'amber', delay: 2500 },
-      { text: '[09:32] Sarah (Product): customers are noticing', cls: 'amber', delay: 2900 },
-      gap(3100),
-      statusInReview(3300),
+      L('> You let rip. Snark. Touch grass. Read the HIG.', 'dim'),
+      L('Replies arrive faster than your App Store status ever updates.'),
+      L('Someone calls you bitter. They are not entirely wrong.', 'red'),
+      G(),
+      L('DAY 2', 'big'),
+      L('[09:14] Sarah (Product): hey is the signup fix live yet?', 'amber'),
+      L('[09:31] Sarah (Product): just checking :)', 'amber'),
+      L('[09:32] Sarah (Product): customers are noticing', 'amber'),
+      SR(),
     ],
     choices: [
       { text: 'Reply to Sarah: "It\'s in review, nothing I can do."', next: 'day2_explain', sanity: 0, slack: 3, days: 1 },
@@ -430,21 +454,16 @@ const nodes = {
   day2_explain: {
     progress: 2,
     lines: [
-      { text: '> You explain the review process to Sarah. Again.', cls: 'dim', delay: 0 },
-      gap(400),
-      { text: '[09:35] You: It\'s with Apple. Review takes 1-3 days. No ETA.', cls: '', delay: 600 },
-      { text: '[09:36] Sarah: oh right. can\'t you like... speed it up?', cls: 'amber', delay: 1200 },
-      gap(1500),
-      { text: 'You stare at the ceiling for a moment.', cls: 'dim', delay: 1700 },
-      gap(2000),
-      { text: 'Then: a notification.', cls: 'bright', delay: 2300 },
-      gap(2500),
-      { text: 'APPLE REVIEW TEAM: Your submission has been rejected.', cls: 'red', delay: 2700 },
-      gap(3000),
-      { text: '"We were unable to log in using the credentials provided."', cls: 'red', delay: 3200 },
-      gap(3500),
-      { text: 'You check the logs. The reviewer typed "passw0rd" not "password".', cls: 'bright', delay: 3700 },
-      { text: 'Your credentials were correct. The reviewer\'s fingers were not.', cls: '', delay: 4200 },
+      L('> You explain the review process to Sarah. Again.', 'dim'),
+      L('[09:35] You: It\'s with Apple. Review takes 1-3 days. No ETA.'),
+      L('[09:36] Sarah: oh right. can\'t you like... speed it up?', 'amber'),
+      L('You stare at the ceiling for a moment.', 'dim'),
+      L('Then: a notification.', 'bright'),
+      G(),
+      L('APPLE REVIEW TEAM: Your submission has been rejected.', 'red'),
+      L('"We were unable to log in using the credentials provided."', 'red'),
+      L('You check the logs. The reviewer typed "passw0rd" not "password".', 'bright'),
+      L('Your credentials were correct. The reviewer\'s fingers were not.'),
     ],
     choices: [
       { text: 'Reply politely: "The credentials are correct. Please retry."', next: 'day3_polite', sanity: -10, slack: 0, days: 1 },
@@ -455,21 +474,16 @@ const nodes = {
   day2_ignore: {
     progress: 2,
     lines: [
-      { text: '> You leave Sarah on read.', cls: 'dim', delay: 0 },
-      gap(400),
-      { text: 'This lasts 11 minutes.', cls: 'dim', delay: 600 },
-      gap(900),
-      { text: '[09:43] Marcus (Engineering Manager): Sarah says the signup fix isn\'t live?', cls: 'amber', delay: 1100 },
-      { text: '[09:44] Marcus (Engineering Manager): what\'s the hold up', cls: 'amber', delay: 1600 },
-      gap(1900),
-      { text: 'A notification arrives.', cls: 'bright', delay: 2100 },
-      gap(2400),
-      { text: 'APPLE REVIEW TEAM: Your submission has been rejected.', cls: 'red', delay: 2600 },
-      gap(2900),
-      { text: '"We were unable to log in using the credentials provided."', cls: 'red', delay: 3100 },
-      gap(3400),
-      { text: 'You check the logs. The reviewer typed "passw0rd" not "password".', cls: 'bright', delay: 3600 },
-      { text: 'A zero. In place of the O. You double-check. Yes.', cls: '', delay: 4100 },
+      L('> You leave Sarah on read.', 'dim'),
+      L('This lasts 11 minutes.', 'dim'),
+      L('[09:43] Marcus (Engineering Manager): Sarah says the signup fix isn\'t live?', 'amber'),
+      L('[09:44] Marcus (Engineering Manager): what\'s the hold up', 'amber'),
+      L('A notification arrives.', 'bright'),
+      G(),
+      L('APPLE REVIEW TEAM: Your submission has been rejected.', 'red'),
+      L('"We were unable to log in using the credentials provided."', 'red'),
+      L('You check the logs. The reviewer typed "passw0rd" not "password".', 'bright'),
+      L('A zero. In place of the O. You double-check. Yes.'),
     ],
     choices: [
       { text: 'Reply politely: "The credentials are correct. Please retry."', next: 'day3_polite', sanity: -10, slack: 0, days: 1 },
@@ -480,27 +494,21 @@ const nodes = {
   day3_polite: {
     progress: 3,
     lines: [
-      { text: '> You compose a polite reply.', cls: 'dim', delay: 0 },
-      { text: '> You rewrite it twice to remove the sarcasm.', cls: 'dim', delay: 400 },
-      gap(700),
-      { text: 'You resubmit.', cls: 'amber', delay: 900 },
-      statusInReview(1200),
-      gap(1500),
-      { text: 'You are back at the end of the queue.', cls: '', delay: 1700 },
-      gap(2000),
-      { text: 'DAY 3', cls: 'big', delay: 2300 },
-      gap(2500),
-      { text: 'Tech news: "App Store review times surge 340% as AI app flood continues"', cls: 'dim', delay: 2700 },
-      { text: '"Developers report waiting up to 12 days for trivial updates"', cls: 'dim', delay: 3200 },
-      gap(3500),
-      { text: 'App Store Connect: average rating 4.2 → 3.8 (last 7 days)', cls: 'red', delay: 3700 },
-      { text: 'New 1-star reviews: "won\'t let me sign up" "stuck on loading forever"', cls: 'dim', delay: 4200 },
-      { text: 'Support pastes a screenshot thread in Slack. It is not flattering.', cls: 'dim', delay: 4700 },
-      gap(5100),
-      { text: '[14:22] Sarah: any update on the update?', cls: 'amber', delay: 5400 },
-      { text: '[14:22] Sarah: haha get it. update on the update', cls: 'amber', delay: 5900 },
-      gap(6200),
-      statusInReview(6500),
+      L('> You compose a polite reply.', 'dim'),
+      L('> You rewrite it twice to remove the sarcasm.', 'dim'),
+      L('You resubmit.', 'amber'),
+      SR(),
+      L('You are back at the end of the queue.'),
+      G(),
+      L('DAY 3', 'big'),
+      L('Tech news: "App Store review times surge 340% as AI app flood continues"', 'dim'),
+      L('"Developers report waiting up to 12 days for trivial updates"', 'dim'),
+      L('App Store Connect: average rating 4.2 → 3.8 (last 7 days)', 'red'),
+      L('New 1-star reviews: "won\'t let me sign up" "stuck on loading forever"', 'dim'),
+      L('Support pastes a screenshot thread in Slack. It is not flattering.', 'dim'),
+      L('[14:22] Sarah: any update on the update?', 'amber'),
+      L('[14:22] Sarah: haha get it. update on the update', 'amber'),
+      SR(),
     ],
     choices: [
       { text: 'Keep waiting. This has to end sometime.', next: 'day3b_new_request', sanity: -15, slack: 0, days: 1 },
@@ -511,20 +519,16 @@ const nodes = {
   day3b_new_request: {
     progress: 3,
     lines: [
-      { text: 'DAY 4', cls: 'big', delay: 0 },
-      gap(300),
-      statusInReview(500),
-      { text: 'You allow yourself one cautious breath.', cls: 'dim', delay: 900 },
-      gap(1200),
-      { text: 'APPLE REVIEW TEAM: Your submission has been rejected.', cls: 'red', delay: 1500 },
-      gap(1800),
-      { text: '"Please provide a screen recording of the full signup flow, including OAuth cancel paths."', cls: 'red', delay: 2000 },
-      gap(2400),
-      { text: 'The login issue was already resolved. This is a new request.', cls: 'bright', delay: 2700 },
-      { text: 'You record the video. You narrate in a neutral voice. You upload.', cls: '', delay: 3200 },
-      { text: 'You resubmit. You are back at the end of the queue.', cls: 'dim', delay: 3700 },
-      gap(4100),
-      statusInReview(4400),
+      L('DAY 4', 'big'),
+      SR(),
+      L('You allow yourself one cautious breath.', 'dim'),
+      G(),
+      L('APPLE REVIEW TEAM: Your submission has been rejected.', 'red'),
+      L('"Please provide a screen recording of the full signup flow, including OAuth cancel paths."', 'red'),
+      L('The login issue was already resolved. This is a new request.', 'bright'),
+      L('You record the video. You narrate in a neutral voice. You upload.'),
+      L('You resubmit. You are back at the end of the queue.', 'dim'),
+      SR(),
     ],
     choices: [
       { text: 'Keep waiting. Surely the video is enough.', next: 'day4_rejection2', sanity: -10, slack: 0, days: 1 },
@@ -535,25 +539,19 @@ const nodes = {
   day3_logs: {
     progress: 3,
     lines: [
-      { text: '> You attach the logs. You express yourself.', cls: 'dim', delay: 0 },
-      { text: '> You delete the last sentence. Reattach the logs.', cls: 'dim', delay: 500 },
-      gap(800),
-      { text: 'You resubmit.', cls: 'amber', delay: 1000 },
-      gap(1300),
-      { text: 'DAY 3', cls: 'big', delay: 1600 },
-      gap(1800),
-      { text: 'Approved! New reviewer. Credentials worked fine.', cls: 'bright', delay: 2000 },
-      gap(2300),
-      { text: 'Status: PENDING DEVELOPER RELEASE', cls: 'amber', delay: 2500 },
-      gap(2800),
-      { text: 'You release it. It\'s live. It\'s finally—', cls: '', delay: 3100 },
-      gap(3400),
-      { text: '[16:05] Sarah: this is great! also did you see the profile photo crop bug?', cls: 'amber', delay: 3700 },
-      { text: '[16:05] Sarah: avatars are getting cropped weird on iPad', cls: 'amber', delay: 4200 },
-      { text: '[16:06] Sarah: can we get that fixed today', cls: 'amber', delay: 4600 },
-      gap(4900),
-      { text: 'The fix will take 20 minutes.', cls: '', delay: 5200 },
-      { text: 'The review will take... you already know.', cls: 'dim', delay: 5600 },
+      L('> You attach the logs. You express yourself.', 'dim'),
+      L('> You delete the last sentence. Reattach the logs.', 'dim'),
+      L('You resubmit.', 'amber'),
+      G(),
+      L('DAY 3', 'big'),
+      L('Approved! New reviewer. Credentials worked fine.', 'bright'),
+      L('Status: PENDING DEVELOPER RELEASE', 'amber'),
+      L('You release it. It\'s live. It\'s finally—'),
+      L('[16:05] Sarah: this is great! also did you see the profile photo crop bug?', 'amber'),
+      L('[16:05] Sarah: avatars are getting cropped weird on iPad', 'amber'),
+      L('[16:06] Sarah: can we get that fixed today', 'amber'),
+      L('The fix will take 20 minutes.'),
+      L('The review will take... you already know.', 'dim'),
     ],
     choices: [
       { text: 'Submit to App Store. You know the drill.', next: 'bad_ending', sanity: -30, slack: 2, days: 1 },
@@ -564,20 +562,16 @@ const nodes = {
   day4_rejection2: {
     progress: 4,
     lines: [
-      { text: 'DAY 5', cls: 'big', delay: 0 },
-      gap(300),
-      { text: 'APPLE REVIEW TEAM: Your submission has been rejected.', cls: 'red', delay: 500 },
-      gap(800),
-      { text: '"Screenshots do not accurately reflect the current app UI."', cls: 'red', delay: 1000 },
-      gap(1300),
-      { text: 'You look at the screenshots.', cls: '', delay: 1500 },
-      { text: 'You look at the app.', cls: '', delay: 1900 },
-      { text: 'They are identical.', cls: 'bright', delay: 2200 },
-      gap(2500),
-      { text: '[11:03] Marcus: CEO is asking about the signup mess', cls: 'amber', delay: 2700 },
-      { text: '[11:03] Marcus: one-star reviews plus the store delay is not a good look', cls: 'amber', delay: 3100 },
-      gap(3400),
-      { text: 'Your sanity score has reached a new low.', cls: 'red', delay: 3600 },
+      L('DAY 5', 'big'),
+      G(),
+      L('APPLE REVIEW TEAM: Your submission has been rejected.', 'red'),
+      L('"Screenshots do not accurately reflect the current app UI."', 'red'),
+      L('You look at the screenshots.'),
+      L('You look at the app.'),
+      L('They are identical.', 'bright'),
+      L('[11:03] Marcus: CEO is asking about the signup mess', 'amber'),
+      L('[11:03] Marcus: one-star reviews plus the store delay is not a good look', 'amber'),
+      L('Your sanity score has reached a new low.', 'red'),
     ],
     choices: [
       { text: 'Retake the screenshots. Resubmit. Reset the clock.', next: 'bad_ending', sanity: -20, slack: 1, days: 1 },
@@ -588,22 +582,13 @@ const nodes = {
   bad_ending: {
     progress: 5,
     lines: [
-      { text: 'You resubmit.', cls: 'dim', delay: 0 },
-      gap(400),
-      statusInReview(700),
-      gap(1000),
-      statusInReview(1600),
-      gap(1900),
-      statusInReview(2300),
-      gap(2600),
-      statusInReview(2800),
-      statusInReview(2950),
-      statusInReview(3050),
-      gap(3300),
-      { text: 'You are still here.', cls: 'red', delay: 3600 },
-      { text: 'You will always be here.', cls: 'red', delay: 4000 },
-      gap(4300),
-      { text: 'GAME OVER', cls: 'big', delay: 4600 },
+      L('You resubmit.', 'dim'),
+      SR(), SR(), SR(), SR(), SR(), SR(),
+      G(),
+      L('You are still here.', 'red'),
+      L('You will always be here.', 'red'),
+      G(),
+      L('GAME OVER', 'big'),
     ],
     choices: [],
     ending: 'bad'
@@ -639,7 +624,7 @@ function renderNode(nodeId) {
 
   let maxDelay = 0;
 
-  node.lines.forEach(line => {
+  expandLines(node.lines).forEach(line => {
     const div = document.createElement('div');
     div.className = 'line' + (line.cls ? ' ' + line.cls : '');
     div.textContent = line.text;
