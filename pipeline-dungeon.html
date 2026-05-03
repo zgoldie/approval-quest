@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pipeline Dungeon — Dave's Handover</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      background: #0f380f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Press Start 2P", monospace;
+    }
+    #wrap {
+      position: relative;
+      line-height: 0;
+    }
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+      max-width: 100vw;
+      max-height: 100vh;
+      width: auto;
+      height: auto;
+      border: 4px solid #306230;
+      box-shadow: 0 0 0 2px #0f380f, 0 0 24px rgba(0,0,0,0.5);
+    }
+    #finale {
+      display: none;
+      position: absolute;
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%);
+      z-index: 10;
+      text-align: center;
+      font-size: 8px;
+      line-height: 1.6;
+    }
+    #finale a {
+      color: #9bbc0f;
+    }
+    #finale.visible { display: block; }
+    #hint {
+      position: fixed;
+      bottom: 8px;
+      left: 0; right: 0;
+      text-align: center;
+      font-size: 6px;
+      color: #306230;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="320" height="304" aria-label="Pipeline Dungeon game"></canvas>
+    <div id="finale">
+      <a href="https://codemagic.io" target="_blank" rel="noopener noreferrer">codemagic.io</a>
+    </div>
+  </div>
+  <p id="hint">Arrows move · Space/Enter interact · ?debug=1 then R = skip room</p>
+
+  <script>
+(function () {
+  'use strict';
+
+  /** Tunables */
+  const TILE = 32;
+  const GW = 10;
+  const GH = 8;
+  const HUD_H = 48;
+  const CANVAS_W = GW * TILE;
+  const CANVAS_H = GH * TILE + HUD_H;
+  const KEY_REPEAT_MS = 140;
+  const DEBUG = /[?&]debug=1(?:&|$)/.test(location.search);
+
+  /** Game Boy greens: 0 darkest … 3 lightest */
+  const P = ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'];
+
+  const FACINGS = { up: 0, right: 1, down: 2, left: 3 };
+  const DX = [0, 1, 0, -1];
+  const DY = [-1, 0, 1, 0];
+
+  /** Canonical puzzle answers — edit freely */
+  const PUZZLE_CONFIG = {
+    gemfile: {
+      /** Correct order of three gem versions at the Bundler shrine */
+      correctOrder: ['2.7.8', '3.1.0', '1.5.4'],
+      bundleError: 'Could not find gem \'ci-mystery-0.0.1\' in any of the gem sources listed in your Gemfile.',
+    },
+    certificates: {
+      correctCertId: 'c_dist',
+      emailBody: '…Fwd: RE: iOS certs — DELETE OLD — use the one marked **Distribution** for store uploads. Not the dev profile. …(rest corrupted)',
+    },
+    passphrase: {
+      /** Fragments from voicemail; player orders these two + fixed tail */
+      fragments: ['NIGHTLY', 'SHIP'],
+      tail: 'IT',
+      correctOrder: ['NIGHTLY', 'SHIP', 'IT'], // NIGHTLY SHIP IT
+    },
+    vault: {
+      correctId: 'v_1password',
+      githubId: 'v_github',
+    },
+    yaml: {
+      workaroundId: 'y_w3',
+    },
+  };
+
+  const COPY = {
+    dave: {
+      gemfile: 'Dave: "Just run bundle install, it\'s all in there."',
+      certificates: 'Dave: "Use the renewed cert, not the old one. You\'ll know."',
+      passphrase: 'Dave: "Passphrase is somewhere safe. Steve knows."',
+      vault: 'Dave: "The p8 is in the safe place, not the other place."',
+      yaml: 'Dave: "Don\'t touch the workaround. You\'ll know which part."',
+    },
+    winDoor: 'Something clicks. The door is loose now.',
+    pipelineRuns: '>>> PIPELINE SUCCEEDED\nBuild 2048 · signed · uploaded\n(You fixed Dave\'s maze.)',
+    betterWay: 'There is a better way than inheriting this dungeon.',
+    codemagicPitch: 'Codemagic: iOS/Android CI that doesn\'t need Dave\'s YAML yoga.',
+  };
+
+  /** Room tile rows: # wall, . floor, = door (logic overlays locked/open) */
+  const BASE_FLOOR = [
+    '##########',
+    '#........#',
+    '#........#',
+    '#........#',
+    '#........#',
+    '#........#',
+    '#........#',
+    '##..===..#',
+  ];
+
+  function cloneTiles() {
+    return BASE_FLOOR.map(function (r) { return r.split('').join(''); });
+  }
+
+  /**
+   * entities: static fields use x,y in tile coords.
+   * kind: dave | pickup | interact
+   * subtype: scrap | email | vm_a | vm_b | bundler | cert | lock | vault | yaml_read | yaml_judge
+   */
+  const ROOMS = [
+    {
+      id: 'gemfile',
+      title: 'The Gemfile',
+      puzzle: 'gemCombo',
+      tiles: cloneTiles(),
+      spawn: { x: 5, y: 4, f: FACINGS.down },
+      entities: [
+        { kind: 'dave', x: 5, y: 1, noteKey: 'gemfile' },
+        { kind: 'pickup', subtype: 'scrap', scrapId: 'a', version: '2.7.8', x: 2, y: 3 },
+        { kind: 'pickup', subtype: 'scrap', scrapId: 'b', version: '3.1.0', x: 7, y: 3 },
+        { kind: 'pickup', subtype: 'scrap', scrapId: 'c', version: '1.5.4', x: 5, y: 2 },
+        { kind: 'interact', subtype: 'bundler', x: 8, y: 5 },
+      ],
+    },
+    {
+      id: 'certificates',
+      title: 'The Certificates',
+      puzzle: 'certPick',
+      tiles: cloneTiles(),
+      spawn: { x: 5, y: 5, f: FACINGS.up },
+      entities: [
+        { kind: 'dave', x: 5, y: 6, noteKey: 'certificates' },
+        { kind: 'pickup', subtype: 'email', x: 5, y: 3 },
+        { kind: 'interact', subtype: 'cert', certId: 'c_dev', label: 'Profile: "Dave iPhone"', x: 2, y: 1 },
+        { kind: 'interact', subtype: 'cert', certId: 'c_push', label: 'Apple Push: ???', x: 4, y: 1 },
+        { kind: 'interact', subtype: 'cert', certId: 'c_adhoc', label: 'Ad Hoc: "Friday build"', x: 6, y: 1 },
+        { kind: 'interact', subtype: 'cert', certId: 'c_dist', label: 'iPhone Distribution: (renewed)', x: 8, y: 1 },
+      ],
+    },
+    {
+      id: 'passphrase',
+      title: 'The Match Passphrase',
+      puzzle: 'passphrase',
+      tiles: cloneTiles(),
+      spawn: { x: 5, y: 5, f: FACINGS.up },
+      entities: [
+        { kind: 'dave', x: 5, y: 6, noteKey: 'passphrase' },
+        { kind: 'pickup', subtype: 'vm_a', x: 2, y: 3 },
+        { kind: 'pickup', subtype: 'vm_b', x: 8, y: 3 },
+        { kind: 'interact', subtype: 'lock', x: 5, y: 2 },
+      ],
+    },
+    {
+      id: 'vault',
+      title: 'The Secrets Vault',
+      puzzle: 'vaultPick',
+      tiles: cloneTiles(),
+      spawn: { x: 5, y: 5, f: FACINGS.up },
+      entities: [
+        { kind: 'dave', x: 5, y: 6, noteKey: 'vault' },
+        { kind: 'interact', subtype: 'vault', vaultId: 'v_slack', label: '#incident-link channel pin', x: 2, y: 2 },
+        { kind: 'interact', subtype: 'vault', vaultId: 'v_github', label: 'Public repo: ios-secrets (README)', x: 8, y: 2 },
+        { kind: 'interact', subtype: 'vault', vaultId: 'v_notes', label: 'Dave\'s Notes.app folder', x: 5, y: 2 },
+        { kind: 'interact', subtype: 'vault', vaultId: 'v_1password', label: '1Password vault "Mobile"', x: 3, y: 4 },
+        { kind: 'interact', subtype: 'vault', vaultId: 'v_disk', label: 'USB stick labeled "NEW"', x: 7, y: 4 },
+      ],
+    },
+    {
+      id: 'yaml',
+      title: 'The YAML Room',
+      puzzle: 'yamlLeaveAlone',
+      tiles: cloneTiles(),
+      spawn: { x: 5, y: 5, f: FACINGS.up },
+      entities: [
+        { kind: 'dave', x: 5, y: 6, noteKey: 'yaml' },
+        { kind: 'interact', subtype: 'yaml_read', yid: 'y1', text: '# TODO: remove after WWDC', x: 1, y: 1 },
+        { kind: 'interact', subtype: 'yaml_read', yid: 'y2', text: '# workaround: disable flaky test', x: 3, y: 1 },
+        { kind: 'interact', subtype: 'yaml_read', yid: 'y_w3', text: '# DO NOT REMOVE — Dave: pipeline dies without this', x: 5, y: 1 },
+        { kind: 'interact', subtype: 'yaml_read', yid: 'y4', text: '# legacy Fastlane path', x: 7, y: 1 },
+        { kind: 'interact', subtype: 'yaml_read', yid: 'y5', text: '# Steve said this was fine', x: 8, y: 1 },
+        { kind: 'interact', subtype: 'yaml_read', yid: 'y6', text: '# bump when Xcode cries', x: 2, y: 2 },
+        { kind: 'interact', subtype: 'yaml_judge', x: 8, y: 5 },
+      ],
+    },
+  ];
+
+  const DOOR_TILES = [{ x: 4, y: 7 }, { x: 5, y: 7 }, { x: 6, y: 7 }];
+
+  function isDoorTile(tx, ty) {
+    return DOOR_TILES.some(function (d) { return d.x === tx && d.y === ty; });
+  }
+
+  function freshProgress() {
+    return {
+      gemfile: { solved: false, gems: [] },
+      certificates: { solved: false, hasEmail: false },
+      passphrase: { solved: false, hasA: false, hasB: false },
+      vault: { solved: false },
+      yaml: { solved: false, readIds: {} },
+    };
+  }
+
+  let state = {
+    roomIndex: 0,
+    px: 5,
+    py: 4,
+    facing: FACINGS.down,
+    inv: {
+      scraps: [],
+      email: false,
+      vm_a: false,
+      vm_b: false,
+    },
+    progress: freshProgress(),
+    mode: 'play',
+    dialog: [],
+    gemUI: null,
+    passUI: null,
+    yamlPickIndex: 0,
+    finale: false,
+    endingOnce: false,
+    keys: Object.create(null),
+    lastMove: 0,
+  };
+
+  function room() {
+    return ROOMS[state.roomIndex];
+  }
+
+  function doorOpen() {
+    var rid = room().id;
+    if (rid === 'yaml' && state.progress.yaml.solved) return true;
+    return state.progress[rid] && state.progress[rid].solved;
+  }
+
+  function tileBlocks(tx, ty) {
+    var row = room().tiles[ty];
+    if (!row) return true;
+    var c = row[tx];
+    if (c === '#') return true;
+    if (c === '=' || isDoorTile(tx, ty)) {
+      if (!doorOpen()) return true;
+      return false;
+    }
+    return false;
+  }
+
+  function resetGame() {
+    state.roomIndex = 0;
+    state.px = ROOMS[0].spawn.x;
+    state.py = ROOMS[0].spawn.y;
+    state.facing = ROOMS[0].spawn.f;
+    state.inv = { scraps: [], email: false, vm_a: false, vm_b: false };
+    state.progress = freshProgress();
+    state.mode = 'play';
+    state.dialog = [];
+    state.gemUI = null;
+    state.passUI = null;
+    state.yamlPickIndex = 0;
+    state.finale = false;
+    state.endingOnce = false;
+    ROOMS.forEach(function (r) {
+      r.entities.forEach(function (e) {
+        delete e._removed;
+      });
+    });
+    document.getElementById('finale').classList.remove('visible');
+  }
+
+  function entityAt(tx, ty) {
+    var list = room().entities;
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      if (e._removed) continue;
+      if (e.x === tx && e.y === ty) return e;
+    }
+    return null;
+  }
+
+  function pushDialog(lines) {
+    state.mode = 'dialog';
+    state.dialog = state.dialog.concat(lines);
+  }
+
+  function advanceDialog() {
+    state.dialog.shift();
+    if (state.dialog.length === 0) state.mode = 'play';
+  }
+
+  function tryMove(dir) {
+    if (state.mode !== 'play') return;
+    var now = performance.now();
+    if (now - state.lastMove < KEY_REPEAT_MS) return;
+    state.facing = dir;
+    var nx = state.px + DX[dir];
+    var ny = state.py + DY[dir];
+    if (tileBlocks(nx, ny)) {
+      state.lastMove = now;
+      return;
+    }
+    state.px = nx;
+    state.py = ny;
+    state.lastMove = now;
+
+    if (doorOpen() && isDoorTile(state.px, state.py)) {
+      if (state.roomIndex < ROOMS.length - 1) {
+        state.roomIndex++;
+        var sp = room().spawn;
+        state.px = sp.x;
+        state.py = sp.y;
+        state.facing = sp.f;
+        pushDialog(['You squeeze through to ' + room().title + '…']);
+      } else if (
+        !state.endingOnce &&
+        state.roomIndex === ROOMS.length - 1 &&
+        room().id === 'yaml' &&
+        state.progress.yaml.solved
+      ) {
+        startEnding();
+      }
+    }
+
+    var ent = entityAt(state.px, state.py);
+    if (ent && ent.kind === 'pickup') {
+      pickupEntity(ent);
+    }
+  }
+
+  function pickupEntity(ent) {
+    if (ent.subtype === 'scrap') {
+      state.inv.scraps.push({ id: ent.scrapId, v: ent.version });
+      ent._removed = true;
+      pushDialog(['Picked up a Gemfile scrap: ' + ent.version]);
+    } else if (ent.subtype === 'email') {
+      state.progress.certificates.hasEmail = true;
+      ent._removed = true;
+      pushDialog(['Half-deleted email recovered.', PUZZLE_CONFIG.certificates.emailBody]);
+    } else if (ent.subtype === 'vm_a') {
+      state.inv.vm_a = true;
+      ent._removed = true;
+      pushDialog(['Voicemail transcript (part 1): "' + PUZZLE_CONFIG.passphrase.fragments[0] + '…"']);
+    } else if (ent.subtype === 'vm_b') {
+      state.inv.vm_b = true;
+      ent._removed = true;
+      pushDialog(['Voicemail transcript (part 2): "…' + PUZZLE_CONFIG.passphrase.fragments[1] + '…"']);
+    }
+  }
+
+  function facingCell() {
+    return {
+      x: state.px + DX[state.facing],
+      y: state.py + DY[state.facing],
+    };
+  }
+
+  function tryInteract() {
+    if (state.mode === 'dialog') {
+      advanceDialog();
+      return;
+    }
+    if (state.mode === 'puzzleGem') return gemUIKey('action');
+    if (state.mode === 'puzzlePass') return passUIKey('action');
+    if (state.mode === 'puzzleYaml') return yamlUIKey('action');
+    if (state.mode !== 'play') return;
+
+    var fc = facingCell();
+    var ent = entityAt(fc.x, fc.y);
+    if (!ent) return;
+
+    if (ent.kind === 'dave') {
+      pushDialog([COPY.dave[ent.noteKey]]);
+      return;
+    }
+    if (ent.kind === 'interact') {
+      if (ent.subtype === 'bundler') {
+        if (state.progress.gemfile.solved) {
+          pushDialog(['Bundler shrine hums quietly. Already satisfied.']);
+          return;
+        }
+        if (state.inv.scraps.length < 3) {
+          pushDialog(['Three version scraps shimmer on the floor first…']);
+          return;
+        }
+        openGemUI();
+        return;
+      }
+      if (ent.subtype === 'cert') {
+        if (!state.progress.certificates.hasEmail) {
+          pushDialog(['You squint at the wall. Without context this is hieroglyphics.']);
+          return;
+        }
+        if (state.progress.certificates.solved) {
+          pushDialog(['You already picked the right cert.']);
+          return;
+        }
+        if (ent.certId === PUZZLE_CONFIG.certificates.correctCertId) {
+          state.progress.certificates.solved = true;
+          pushDialog(['This one matches the email. Keys jingle approvingly.', COPY.winDoor]);
+        } else {
+          pushDialog(['Wrong profile. Xcode would laugh at you. Try another plaque.']);
+        }
+        return;
+      }
+      if (ent.subtype === 'lock') {
+        if (state.progress.passphrase.solved) {
+          pushDialog(['Lock already open.']);
+          return;
+        }
+        if (!state.inv.vm_a || !state.inv.vm_b) {
+          pushDialog(['The lock display blinks: need both voicemail scraps.']);
+          return;
+        }
+        openPassUI();
+        return;
+      }
+      if (ent.subtype === 'vault') {
+        if (state.progress.vault.solved) {
+          pushDialog(['You already chose where the p8 lives.']);
+          return;
+        }
+        if (ent.vaultId === PUZZLE_CONFIG.vault.githubId) {
+          pushDialog([
+            'You peek at the public GitHub repo.',
+            'A thousand bots stare back. Secrets diff in real time. You close the tab.',
+            '(That was not the safe place.)',
+          ]);
+          return;
+        }
+        if (ent.vaultId === PUZZLE_CONFIG.vault.correctId) {
+          state.progress.vault.solved = true;
+          pushDialog(['1Password it is. The p8 breathes easy.', COPY.winDoor]);
+        } else {
+          pushDialog(['Plausible, but Dave\'s voice echoes: "not the other place." Keep looking.']);
+        }
+        return;
+      }
+      if (ent.subtype === 'yaml_read') {
+        pushDialog([ent.text]);
+        state.progress.yaml.readIds[ent.yid] = true;
+        return;
+      }
+      if (ent.subtype === 'yaml_judge') {
+        if (state.progress.yaml.solved) {
+          pushDialog(['Workaround already respected.']);
+          return;
+        }
+        state.mode = 'puzzleYaml';
+        state.yamlPickIndex = 0;
+        return;
+      }
+    }
+  }
+
+  function openGemUI() {
+    var versions = state.inv.scraps.map(function (s) { return s.v; });
+    var idx0 = versions.indexOf(PUZZLE_CONFIG.gemfile.correctOrder[0]);
+    var idx1 = versions.indexOf(PUZZLE_CONFIG.gemfile.correctOrder[1]);
+    var idx2 = versions.indexOf(PUZZLE_CONFIG.gemfile.correctOrder[2]);
+    if (idx0 < 0 || idx1 < 0 || idx2 < 0) {
+      pushDialog(['Scraps are corrupted. Collect all three first.']);
+      return;
+    }
+    /** Start one rotation off correct so bundle is not already satisfied */
+    var choices = [idx0, idx1, idx2];
+    choices = [(choices[0] + 1) % 3, (choices[1] + 1) % 3, (choices[2] + 1) % 3];
+    state.gemUI = { slot: 0, choices: choices };
+    state.mode = 'puzzleGem';
+  }
+
+  function gemUIKey(action, dir) {
+    var g = state.gemUI;
+    if (!g) return;
+    var vers = state.inv.scraps.map(function (s) { return s.v; });
+    if (action === 'left') {
+      g.slot = (g.slot + 2) % 3;
+    } else if (action === 'right') {
+      g.slot = (g.slot + 1) % 3;
+    } else if (action === 'up' || action === 'down') {
+      var delta = action === 'up' ? 1 : -1;
+      g.choices[g.slot] = (g.choices[g.slot] + delta + vers.length) % vers.length;
+    } else if (action === 'action') {
+      var pick = g.choices.map(function (ci) { return vers[ci]; });
+      var ok = pick.every(function (v, i) { return v === PUZZLE_CONFIG.gemfile.correctOrder[i]; });
+      state.gemUI = null;
+      state.mode = 'play';
+      if (ok) {
+        state.progress.gemfile.solved = true;
+        pushDialog(['bundle install completes. The shrine weeps ruby tears.', COPY.winDoor]);
+      } else {
+        pushDialog([PUZZLE_CONFIG.gemfile.bundleError, 'The combination was wrong.']);
+      }
+    }
+  }
+
+  function openPassUI() {
+    state.passUI = {
+      /** Wrong initial fragment order (swap to NIGHTLY then SHIP) */
+      order: [1, 0],
+      slot: 0,
+    };
+    state.mode = 'puzzlePass';
+  }
+
+  function passUIKey(action) {
+    var p = state.passUI;
+    if (!p) return;
+    if (action === 'left' || action === 'right') {
+      p.slot = 1 - p.slot;
+    } else if (action === 'up' || action === 'down') {
+      var o = p.order.slice();
+      if (p.slot === 0) {
+        o[0] = (o[0] + (action === 'up' ? 1 : -1) + 2) % 2;
+      } else {
+        o[1] = (o[1] + (action === 'up' ? 1 : -1) + 2) % 2;
+      }
+      p.order = o;
+    } else if (action === 'action') {
+      var fr = PUZZLE_CONFIG.passphrase.fragments;
+      var a = fr[p.order[0]];
+      var b = fr[p.order[1]];
+      var tail = PUZZLE_CONFIG.passphrase.tail;
+      var guess = [a, b, tail];
+      var ok = guess.join('|') === PUZZLE_CONFIG.passphrase.correctOrder.join('|');
+      state.passUI = null;
+      state.mode = 'play';
+      if (ok) {
+        state.progress.passphrase.solved = true;
+        pushDialog(['MATCH accepts: ' + a + b + tail, COPY.winDoor]);
+      } else {
+        pushDialog(['MATCH scowls. Order matters. Try again.']);
+      }
+    }
+  }
+
+  var YAML_ORDER = ['y1', 'y2', 'y_w3', 'y4', 'y5', 'y6'];
+
+  function yamlUIKey(action) {
+    if (state.mode !== 'puzzleYaml') return;
+    if (action === 'left') {
+      state.yamlPickIndex = (state.yamlPickIndex + YAML_ORDER.length - 1) % YAML_ORDER.length;
+    } else if (action === 'right') {
+      state.yamlPickIndex = (state.yamlPickIndex + 1) % YAML_ORDER.length;
+    } else if (action === 'action') {
+      var pick = YAML_ORDER[state.yamlPickIndex];
+      state.mode = 'play';
+      if (pick === PUZZLE_CONFIG.yaml.workaroundId) {
+        state.progress.yaml.solved = true;
+        pushDialog(['You vow to never delete that line.', COPY.winDoor]);
+      } else {
+        pushDialog(['You "clean up" the wrong comment.', '>>> PIPELINE FAILED', 'Dave was right. Undo undo undo.']);
+      }
+    }
+  }
+
+  function startEnding() {
+    if (state.endingOnce) return;
+    state.endingOnce = true;
+    state.finale = true;
+    state.mode = 'dialog';
+    state.dialog = [
+      COPY.pipelineRuns,
+      COPY.betterWay,
+      COPY.codemagicPitch,
+    ];
+  }
+
+  function onKeyDown(e) {
+    var k = e.code;
+    state.keys[k] = true;
+    if (DEBUG && k === 'KeyR') {
+      state.roomIndex = Math.min(ROOMS.length - 1, state.roomIndex + 1);
+      var sp = room().spawn;
+      state.px = sp.x; state.py = sp.y; state.facing = sp.f;
+      state.mode = 'play';
+      state.dialog = [];
+    }
+    if (state.mode === 'dialog' && (k === 'Space' || k === 'Enter')) {
+      e.preventDefault();
+      advanceDialog();
+      if (state.finale && state.dialog.length === 0) {
+        document.getElementById('finale').classList.add('visible');
+      }
+      return;
+    }
+    if (k === 'Space' || k === 'Enter') {
+      e.preventDefault();
+      tryInteract();
+      return;
+    }
+    if (state.mode === 'puzzleGem') {
+      if (k === 'ArrowLeft') { e.preventDefault(); gemUIKey('left'); }
+      else if (k === 'ArrowRight') { e.preventDefault(); gemUIKey('right'); }
+      else if (k === 'ArrowUp') { e.preventDefault(); gemUIKey('up'); }
+      else if (k === 'ArrowDown') { e.preventDefault(); gemUIKey('down'); }
+      return;
+    }
+    if (state.mode === 'puzzlePass') {
+      if (k === 'ArrowLeft') { e.preventDefault(); passUIKey('left'); }
+      else if (k === 'ArrowRight') { e.preventDefault(); passUIKey('right'); }
+      else if (k === 'ArrowUp') { e.preventDefault(); passUIKey('up'); }
+      else if (k === 'ArrowDown') { e.preventDefault(); passUIKey('down'); }
+      return;
+    }
+    if (state.mode === 'puzzleYaml') {
+      if (k === 'ArrowLeft') { e.preventDefault(); yamlUIKey('left'); }
+      else if (k === 'ArrowRight') { e.preventDefault(); yamlUIKey('right'); }
+      return;
+    }
+    if (state.mode === 'play') {
+      if (k === 'ArrowUp') { e.preventDefault(); tryMove(FACINGS.up); }
+      else if (k === 'ArrowDown') { e.preventDefault(); tryMove(FACINGS.down); }
+      else if (k === 'ArrowLeft') { e.preventDefault(); tryMove(FACINGS.left); }
+      else if (k === 'ArrowRight') { e.preventDefault(); tryMove(FACINGS.right); }
+    }
+  }
+
+  function onKeyUp(e) {
+    state.keys[e.code] = false;
+  }
+
+  /** --- Draw --- */
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  if (canvas.width !== CANVAS_W || canvas.height !== CANVAS_H) {
+    canvas.width = CANVAS_W;
+    canvas.height = CANVAS_H;
+  }
+  ctx.imageSmoothingEnabled = false;
+
+  function drawFloorTile(tx, ty) {
+    var x = tx * TILE;
+    var y = ty * TILE;
+    var alt = (tx + ty) % 2;
+    ctx.fillStyle = alt ? P[3] : P[2];
+    ctx.fillRect(x, y, TILE, TILE);
+    ctx.strokeStyle = P[1];
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 4, y + 4, TILE - 8, TILE - 8);
+  }
+
+  function drawWallTile(tx, ty) {
+    var x = tx * TILE;
+    var y = ty * TILE;
+    ctx.fillStyle = P[1];
+    ctx.fillRect(x, y, TILE, TILE);
+    ctx.fillStyle = P[2];
+    ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+    ctx.fillStyle = P[0];
+    ctx.fillRect(x + 4, y + 4, TILE - 8, TILE - 8);
+    ctx.fillStyle = P[3];
+    if ((tx + ty) % 3 === 0) {
+      ctx.fillRect(x + 10, y + 8, 4, 4);
+      ctx.fillRect(x + 18, y + 20, 4, 4);
+    }
+  }
+
+  function drawDoorTile(tx, ty, open) {
+    var x = tx * TILE;
+    var y = ty * TILE;
+    if (!open) {
+      drawWallTile(tx, ty);
+      return;
+    }
+    drawFloorTile(tx, ty);
+    ctx.fillStyle = P[0];
+    ctx.fillRect(x + 8, y + 4, 16, 24);
+    ctx.fillStyle = P[2];
+    ctx.fillRect(x + 10, y + 8, 12, 16);
+  }
+
+  function drawWorld() {
+    var r = room();
+    for (var ty = 0; ty < GH; ty++) {
+      for (var tx = 0; tx < GW; tx++) {
+        var row = r.tiles[ty];
+        var c = row[tx];
+        if (isDoorTile(tx, ty)) {
+          drawDoorTile(tx, ty, doorOpen());
+        } else if (c === '#') {
+          drawWallTile(tx, ty);
+        } else {
+          drawFloorTile(tx, ty);
+        }
+      }
+    }
+
+    r.entities.forEach(function (e) {
+      if (e._removed) return;
+      var ex = e.x * TILE;
+      var ey = e.y * TILE;
+      if (e.kind === 'dave') {
+        ctx.fillStyle = P[0];
+        ctx.fillRect(ex + 4, ey + 6, TILE - 8, TILE - 10);
+        ctx.fillStyle = P[3];
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.fillText('D', ex + 10, ey + 22);
+      } else if (e.kind === 'pickup') {
+        if (e.subtype === 'scrap') {
+          ctx.fillStyle = P[1];
+          ctx.fillRect(ex + 8, ey + 12, 16, 12);
+          ctx.fillStyle = P[3];
+          ctx.font = '6px "Press Start 2P", monospace';
+          ctx.fillText('Rb', ex + 10, ey + 22);
+        } else if (e.subtype === 'email') {
+          ctx.fillStyle = P[2];
+          ctx.fillRect(ex + 6, ey + 10, 20, 14);
+          ctx.fillStyle = P[0];
+          ctx.font = '6px "Press Start 2P", monospace';
+          ctx.fillText('@', ex + 12, ey + 22);
+        } else if (e.subtype === 'vm_a' || e.subtype === 'vm_b') {
+          ctx.fillStyle = P[1];
+          ctx.fillRect(ex + 10, ey + 8, 12, 18);
+          ctx.fillStyle = P[3];
+          ctx.font = '6px "Press Start 2P", monospace';
+          ctx.fillText('vm', ex + 8, ey + 22);
+        }
+      } else if (e.kind === 'interact') {
+        if (e.subtype === 'bundler') {
+          ctx.fillStyle = P[0];
+          ctx.fillRect(ex + 4, ey + 4, TILE - 8, TILE - 8);
+          ctx.fillStyle = P[2];
+          ctx.font = '7px "Press Start 2P", monospace';
+          ctx.fillText('$', ex + 12, ey + 22);
+        } else if (e.subtype === 'cert') {
+          ctx.fillStyle = P[1];
+          ctx.fillRect(ex + 2, ey + 4, TILE - 4, TILE - 10);
+          ctx.fillStyle = P[3];
+          ctx.font = '6px "Press Start 2P", monospace';
+          ctx.fillText('C', ex + 12, ey + 18);
+        } else if (e.subtype === 'lock') {
+          ctx.fillStyle = P[0];
+          ctx.beginPath();
+          ctx.arc(ex + TILE / 2, ey + TILE / 2, 12, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = P[2];
+          ctx.font = '8px "Press Start 2P", monospace';
+          ctx.fillText('8', ex + 12, ey + 22);
+        } else if (e.subtype === 'vault') {
+          ctx.fillStyle = P[1];
+          ctx.fillRect(ex + 6, ey + 8, 20, 18);
+          ctx.fillStyle = P[3];
+          ctx.font = '6px "Press Start 2P", monospace';
+          ctx.fillText('?', ex + 12, ey + 22);
+        } else if (e.subtype === 'yaml_read') {
+          ctx.fillStyle = P[0];
+          ctx.fillRect(ex + 2, ey + 6, TILE - 4, TILE - 12);
+          ctx.fillStyle = P[2];
+          ctx.font = '6px "Press Start 2P", monospace';
+          ctx.fillText('#', ex + 12, ey + 20);
+        } else if (e.subtype === 'yaml_judge') {
+          ctx.fillStyle = P[2];
+          ctx.fillRect(ex + 4, ey + 8, TILE - 8, TILE - 14);
+          ctx.fillStyle = P[0];
+          ctx.font = '6px "Press Start 2P", monospace';
+          ctx.fillText('OK', ex + 8, ey + 22);
+        }
+      }
+    });
+
+    var px = state.px * TILE;
+    var py = state.py * TILE;
+    ctx.fillStyle = P[0];
+    ctx.fillRect(px + 10, py + 8, 12, 18);
+    ctx.fillStyle = P[3];
+    ctx.fillRect(px + 12, py + 10, 8, 6);
+    var fx = state.facing;
+    var sx = px + 16 + DX[fx] * 10;
+    var sy = py + 14 + DY[fx] * 8;
+    ctx.fillStyle = P[2];
+    ctx.fillRect(sx - 2, sy - 2, 4, 10);
+  }
+
+  function drawHUD() {
+    var y0 = GH * TILE;
+    ctx.fillStyle = P[1];
+    ctx.fillRect(0, y0, CANVAS_W, HUD_H);
+    ctx.strokeStyle = P[0];
+    ctx.strokeRect(2, y0 + 2, CANVAS_W - 4, HUD_H - 4);
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.fillStyle = P[3];
+    ctx.fillText(room().title, 8, y0 + 14);
+
+    function icon(ix, label, on) {
+      var bx = 8 + ix * 28;
+      var by = y0 + 18;
+      ctx.fillStyle = on ? P[2] : P[0];
+      ctx.fillRect(bx, by, 22, 22);
+      ctx.strokeStyle = P[3];
+      ctx.strokeRect(bx, by, 22, 22);
+      ctx.fillStyle = on ? P[0] : P[1];
+      ctx.font = '6px "Press Start 2P", monospace';
+      ctx.fillText(label, bx + 4, by + 15);
+    }
+    icon(0, 'G', state.inv.scraps.length > 0);
+    icon(1, '@', state.inv.email);
+    icon(2, 'V', state.inv.vm_a && state.inv.vm_b);
+    icon(3, 'K', state.progress.vault.solved || state.roomIndex > 2);
+    icon(4, 'Y', Object.keys(state.progress.yaml.readIds).length > 0);
+
+    ctx.fillStyle = P[3];
+    ctx.font = '5px "Press Start 2P", monospace';
+    ctx.fillText('inv', 8, y0 + 46);
+  }
+
+  function wrapText(text, maxW) {
+    var words = text.split(' ');
+    var lines = [];
+    var cur = '';
+    for (var i = 0; i < words.length; i++) {
+      var test = cur ? cur + ' ' + words[i] : words[i];
+      if (ctx.measureText(test).width > maxW && cur) {
+        lines.push(cur);
+        cur = words[i];
+      } else {
+        cur = test;
+      }
+    }
+    if (cur) lines.push(cur);
+    return lines.length ? lines : [text];
+  }
+
+  function drawDialog() {
+    if (state.dialog.length === 0) return;
+    var msg = state.dialog[0];
+    var boxH = 72;
+    var boxY = GH * TILE - boxH - 4;
+    ctx.fillStyle = P[0];
+    ctx.fillRect(4, boxY, CANVAS_W - 8, boxH);
+    ctx.strokeStyle = P[2];
+    ctx.lineWidth = 2;
+    ctx.strokeRect(4, boxY, CANVAS_W - 8, boxH);
+    ctx.fillStyle = P[3];
+    ctx.font = '6px "Press Start 2P", monospace';
+    var lines = [];
+    wrapText(msg, CANVAS_W - 24).forEach(function (ln) { lines.push(ln); });
+    lines = lines.slice(0, 5);
+    for (var i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], 10, boxY + 12 + i * 10);
+    }
+    ctx.fillStyle = P[2];
+    ctx.fillText('SPACE', CANVAS_W - 52, boxY + boxH - 8);
+  }
+
+  function drawGemOverlay() {
+    if (state.mode !== 'puzzleGem' || !state.gemUI) return;
+    var g = state.gemUI;
+    var vers = state.inv.scraps.map(function (s) { return s.v; });
+    ctx.fillStyle = 'rgba(15,56,15,0.92)';
+    ctx.fillRect(8, 40, CANVAS_W - 16, 120);
+    ctx.strokeStyle = P[2];
+    ctx.strokeRect(8, 40, CANVAS_W - 16, 120);
+    ctx.fillStyle = P[3];
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.fillText('Bundler order L/R slot U/D ver', 14, 56);
+    for (var s = 0; s < 3; s++) {
+      var cx = 24 + s * 90;
+      var cy = 90;
+      if (g.slot === s) {
+        ctx.strokeStyle = P[3];
+        ctx.strokeRect(cx - 4, cy - 4, 72, 36);
+      }
+      ctx.fillStyle = P[2];
+      ctx.fillRect(cx, cy, 64, 28);
+      ctx.fillStyle = P[0];
+      ctx.fillText(vers[g.choices[s]], cx + 6, cy + 18);
+    }
+    ctx.fillStyle = P[3];
+    ctx.fillText('SPACE submit', 14, 148);
+  }
+
+  function drawPassOverlay() {
+    if (state.mode !== 'puzzlePass' || !state.passUI) return;
+    var p = state.passUI;
+    var fr = PUZZLE_CONFIG.passphrase.fragments;
+    ctx.fillStyle = 'rgba(15,56,15,0.92)';
+    ctx.fillRect(8, 48, CANVAS_W - 16, 100);
+    ctx.strokeStyle = P[2];
+    ctx.strokeRect(8, 48, CANVAS_W - 16, 100);
+    ctx.fillStyle = P[3];
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.fillText('Order fragments L/R pick U/D swap', 12, 64);
+    var parts = [fr[p.order[0]], fr[p.order[1]], PUZZLE_CONFIG.passphrase.tail];
+    for (var i = 0; i < 2; i++) {
+      var cx = 40 + i * 100;
+      var cy = 100;
+      if (p.slot === i) {
+        ctx.strokeStyle = P[3];
+        ctx.strokeRect(cx - 4, cy - 4, 88, 28);
+      }
+      ctx.fillStyle = P[2];
+      ctx.fillRect(cx, cy, 80, 20);
+      ctx.fillStyle = P[0];
+      ctx.font = '6px "Press Start 2P", monospace';
+      ctx.fillText(parts[i], cx + 4, cy + 14);
+    }
+    ctx.fillStyle = P[3];
+    ctx.fillText('+' + parts[2] + '  SPACE lock', 40, 132);
+  }
+
+  function drawYamlOverlay() {
+    if (state.mode !== 'puzzleYaml') return;
+    var id = YAML_ORDER[state.yamlPickIndex];
+    var label = id === 'y_w3' ? 'Dave workaround?' : 'Comment ' + (state.yamlPickIndex + 1);
+    ctx.fillStyle = 'rgba(15,56,15,0.9)';
+    ctx.fillRect(16, 52, CANVAS_W - 32, 72);
+    ctx.strokeStyle = P[2];
+    ctx.strokeRect(16, 52, CANVAS_W - 32, 72);
+    ctx.fillStyle = P[3];
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.fillText('Which line to LEAVE?', 22, 68);
+    ctx.fillText('Pick: ' + label, 22, 84);
+    ctx.fillText('<- ->  SPACE', 22, 100);
+  }
+
+  function drawFinaleOverlay() {
+    if (!state.finale || state.dialog.length > 0) return;
+    ctx.fillStyle = 'rgba(15,56,15,0.85)';
+    ctx.fillRect(0, 0, CANVAS_W, GH * TILE);
+    ctx.fillStyle = P[3];
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.fillText('CI PEACE', 100, 80);
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.fillText('Tap link below', 70, 120);
+  }
+
+  function loop() {
+    ctx.fillStyle = P[0];
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    drawWorld();
+    drawHUD();
+    drawGemOverlay();
+    drawPassOverlay();
+    drawYamlOverlay();
+    drawDialog();
+    drawFinaleOverlay();
+    requestAnimationFrame(loop);
+  }
+
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+
+  document.fonts.ready.then(function () {
+    requestAnimationFrame(loop);
+  }).catch(function () {
+    requestAnimationFrame(loop);
+  });
+})();
+  </script>
+</body>
+</html>
