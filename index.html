@@ -383,9 +383,9 @@ const nodes = {
     lines: [
       L('CHAMBER I — THE GATEKEEPERS', 'big'),
       L('The goblin is silent for so long you suspect another full day has gone by.', 'dim'),
-      L('While you wait, you receive a message.', 'bright'),
-      L('MESSAGE: The Chief saw a sign outside The Store, saying reviews take 24 hours.', 'amber'),
-      L('MESSAGE: He asks if you are still alive and if so, what is taking so long.', 'amber'),
+      L('A scroll appears before you.', 'bright'),
+      L('SCROLL: The Chief saw a sign outside The Store, saying reviews take 24 hours.', 'amber'),
+      L('SCROLL: He asks if you are still alive and if so, what is taking so long.', 'amber'),
       G(),
       L('The goblin gives a slow nod.', 'bright'),
       L('A content smile appears, as if it pleased with itself.', 'dim'),
@@ -413,14 +413,14 @@ const nodes = {
     ],
     choices: [
       { text: 'Check the thick tome beside the goblin.', next: 'chamber2_tome', sanity: -1, slack: 0, days: 0 },
-      { text: 'Cast a message to a fellow mage about rule changes.', next: 'chamber2_mage', sanity: -1, slack: 1, days: 0 },
+      { text: 'Cast Direct Magic to a fellow mage about rule changes.', next: 'chamber2_mage', sanity: -1, slack: 1, days: 0 },
     ]
   },
 
   chamber2_mage: {
     progress: 2,
     lines: [
-      L('Your message flies out on Direct Magic.', 'dim'),
+      L('Your Direct Magic flies out to a fellow mage.', 'dim'),
       L('A reply returns quickly: "Haven\'t heard anything. Sorry."', 'amber'),
       L('No one knows. The goblin does not elaborate.', 'dim'),
     ],
@@ -436,13 +436,13 @@ const nodes = {
       L('The pages are dense, dry, and endless.', 'dim'),
       L('After what feels like ages, you find a small note at the very back:', 'bright'),
       L('TOME: Required scroll dimensions changed from 8 x 14" to 8 x 13.9".', 'amber'),
-      L('TOME: This contradicts earlier instructions, but you try it anyway.', 'amber'),
+      L('This contradicts earlier instructions, but you try it anyway.', 'dim'),
       L('You take your knife, slice off a sliver of scroll, and resubmit.', 'dim'),
       L('A day later, it is accepted.', 'bright'),
       G(),
-      L('A scroll arrives from the Primary Messenger.', 'amber'),
-      L('MESSAGE: The Chief has hired a Fang Wizard and is very excited.', 'amber'),
-      L('MESSAGE: The Chief is sure that this will solve all our problems.', 'amber'),
+      L('A scroll arrives from the Primary Messenger.', 'dim'),
+      L('SCROLL: The Chief has hired a Fang Wizard and is very excited.', 'amber'),
+      L('SCROLL: The Chief is sure that this will solve all our problems.', 'amber'),
     ],
     choices: [
       { text: 'Move to the next chamber.', next: 'chamber3', sanity: -4, slack: 0, days: 1 },
@@ -461,16 +461,15 @@ const nodes = {
       G(),
       L('The corridor does not end. Your footsteps echo.', 'dim'),
       G(),
-      L('MESSAGE: The Fang Wizard has a question about store keys.', 'amber'),
-      L('MESSAGE: The Fang Wizard is stating this was someone else\'s responsibility before.', 'amber'),
-      L('MESSAGE: The Chief is still delighted that we\'ve hired the Fang Wizard.', 'amber'),
+      L('SCROLL: The Fang Wizard has a question about store keys.', 'amber'),
+      L('SCROLL: The Fang Wizard is stating this was someone else\'s responsibility at their last role.', 'amber'),
+      L('SCROLL: The Chief is still delighted that we\'ve hired a Fang Wizard.', 'amber'),
     ],
     choices: [
-      { text: 'Relay assent to the Chief. Perhaps it will help.', next: 'setback', sanity: -10, slack: 2, days: 5 },
-      { text: 'Decline with grace. Keep walking.', next: 'chamber4', sanity: 0, slack: 1, days: 2 },
+      { text: 'Relay with guidance for the wizard. Perhaps it will help.', next: 'chamber4', sanity: -10, slack: 2, days: 5 },
+      { text: 'Ignore the request. Keep walking.', next: 'chamber4', sanity: 0, slack: 1, days: 2 },
     ]
   },
-
 
   chamber4: {
     progress: 4,
@@ -482,8 +481,8 @@ const nodes = {
       L('The seal reads: APPROVED.', 'bright'),
       L('No reason is given. It is already looking at the next pile.', 'dim'),
       G(),
-      L('MESSAGE: The Fang Wizard seems unfamiliar with the process.', 'amber'),
-      L('MESSAGE: Can you train them?', 'amber'),
+      L('SCROLL: The Fang Wizard seems unfamiliar with the process.', 'amber'),
+      L('SCROLL: Can you train them?', 'amber'),
       G(),
       L('The gates of the store grind open.', 'dim'),
       L('You permit yourself half a breath.', 'dim'),
