@@ -345,7 +345,7 @@ const nodes = {
       L('CHAMBER I — THE GATEKEEPERS', 'big'),
       L('You arrive at the gates of the Store of Applications.', 'dim'),
       L('You announce yourself to the review goblin.', 'bright'),
-      L('It holds perfectly still, like carved stone. Only its eyes swivel to follow you.', 'bright'),
+      L('It holds perfectly still, only its eyes swivel towards you.', 'bright'),
       G(),
       L('You announce "the password is Test Phrase"', 'dim'),
       G(),
@@ -413,7 +413,7 @@ const nodes = {
     ],
     choices: [
       { text: 'Check the thick tome beside the goblin.', next: 'chamber2_tome', sanity: -1, slack: 0, days: 0 },
-      { text: 'Cast Direct Magic to a fellow mage about rule changes.', next: 'chamber2_mage', sanity: -1, slack: 1, days: 0 },
+      { text: 'Cast a message to a fellow mage about rule changes.', next: 'chamber2_mage', sanity: -1, slack: 1, days: 0 },
     ]
   },
 
@@ -436,6 +436,7 @@ const nodes = {
       L('The pages are dense, dry, and endless.', 'dim'),
       L('After what feels like ages, you find a small note at the very back:', 'bright'),
       L('TOME: Required scroll dimensions changed from 8 x 14" to 8 x 13.9".', 'amber'),
+      L('TOME: This contradicts earlier instructions, but you try it anyway.', 'amber'),
       L('You take your knife, slice off a sliver of scroll, and resubmit.', 'dim'),
       L('A day later, it is accepted.', 'bright'),
       G(),
@@ -460,8 +461,9 @@ const nodes = {
       G(),
       L('The corridor does not end. Your footsteps echo.', 'dim'),
       G(),
-      L('MESSAGE: The Fang Wizard seems unfamiliar with the Store of Applications.', 'amber'),
-      L('MESSAGE: Can you train them?', 'amber'),
+      L('MESSAGE: The Fang Wizard has a question about store keys.', 'amber'),
+      L('MESSAGE: The Fang Wizard is stating this was someone else\'s responsibility before.', 'amber'),
+      L('MESSAGE: The Chief is still delighted that we\'ve hired the Fang Wizard.', 'amber'),
     ],
     choices: [
       { text: 'Relay assent to the Chief. Perhaps it will help.', next: 'setback', sanity: -10, slack: 2, days: 5 },
@@ -479,6 +481,9 @@ const nodes = {
       L('It glances at your scroll for a heartbeat and stamps it.', 'bright'),
       L('The seal reads: APPROVED.', 'bright'),
       L('No reason is given. It is already looking at the next pile.', 'dim'),
+      G(),
+      L('MESSAGE: The Fang Wizard seems unfamiliar with the process.', 'amber'),
+      L('MESSAGE: Can you train them?', 'amber'),
       G(),
       L('The gates of the store grind open.', 'dim'),
       L('You permit yourself half a breath.', 'dim'),
