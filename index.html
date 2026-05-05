@@ -102,6 +102,11 @@
     gap: 0.2rem;
   }
 
+  .output.ending-state {
+    min-height: 0;
+    margin-bottom: 8px;
+  }
+
   .line {
     opacity: 0;
     animation: appear 0.05s forwards;
@@ -113,6 +118,10 @@
   .line.amber { color: var(--amber); }
   .line.red { color: var(--red); }
   .line.system { color: var(--green-dim); font-size: 13px; }
+  .line.init-boot {
+    animation: bootline 1.6s forwards;
+    overflow: hidden;
+  }
   .line.gap { height: 12px; }
   .line.big {
     font-family: 'VT323', monospace;
@@ -125,6 +134,30 @@
     to { opacity: 1; }
   }
 
+  @keyframes bootline {
+    0% {
+      opacity: 0;
+      max-height: 28px;
+      padding-top: 3px;
+      padding-bottom: 3px;
+      margin: 0;
+    }
+    10%, 70% {
+      opacity: 1;
+      max-height: 28px;
+      padding-top: 3px;
+      padding-bottom: 3px;
+      margin: 0;
+    }
+    100% {
+      opacity: 0;
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      margin: 0;
+    }
+  }
+
   .prompt {
     color: var(--green-dim);
     margin-bottom: 20px;
@@ -135,7 +168,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 16px;
+    margin-top: 20px;
+    padding-top: 6px;
   }
 
   .choice-btn {
@@ -144,7 +178,7 @@
     color: var(--green);
     font-family: 'Share Tech Mono', monospace;
     font-size: 14px;
-    padding: 10px 16px;
+    padding: 12px 18px;
     text-align: left;
     cursor: pointer;
     transition: all 0.1s;
@@ -165,23 +199,21 @@
     box-shadow: 0 0 12px var(--green-glow), inset 0 0 12px var(--green-glow);
   }
 
+  .choice-btn.selected {
+    border-color: var(--green);
+    background: var(--green-glow);
+    color: #fff;
+    text-shadow: 0 0 8px var(--green);
+    box-shadow: 0 0 12px var(--green-glow), inset 0 0 12px var(--green-glow);
+    cursor: default;
+  }
+
+  .choice-btn:disabled {
+    opacity: 0.85;
+  }
+
   .choice-btn:active {
     transform: scale(0.99);
-  }
-
-  .status-bar {
-    display: flex;
-    gap: 24px;
-    border-top: 1px solid var(--green-dark);
-    border-bottom: 1px solid var(--green-dark);
-    padding: 8px 0;
-    margin-bottom: 24px;
-    font-size: 13px;
-    color: var(--green-dim);
-  }
-
-  .status-bar span b {
-    color: var(--green);
   }
 
   .cursor {
@@ -196,30 +228,6 @@
 
   @keyframes blink {
     50% { opacity: 0; }
-  }
-
-  .ending-box {
-    border: 1px solid var(--green);
-    padding: 20px;
-    margin-top: 16px;
-    box-shadow: 0 0 20px var(--green-glow), inset 0 0 20px var(--green-glow);
-    text-align: center;
-  }
-
-  .ending-box.bad {
-    border-color: var(--red);
-    box-shadow: 0 0 20px rgba(255,49,49,0.2), inset 0 0 20px rgba(255,49,49,0.1);
-  }
-
-  .ending-box .cta {
-    margin-top: 16px;
-    font-size: 13px;
-    color: var(--green-dim);
-  }
-
-  .ending-box .cta a {
-    color: var(--green);
-    text-decoration: none;
   }
 
   .restart-btn {
@@ -268,14 +276,7 @@
 
   <div class="title-block">
     <h1>APPROVAL QUEST</h1>
-    <div class="subtitle">a text adventure in bureaucratic suffering</div>
-  </div>
-
-  <div class="status-bar">
-    <span>DAY <b id="stat-day">1</b></span>
-    <span>SANITY <b id="stat-sanity">100%</b></span>
-    <span>SLACK MESSAGES <b id="stat-slack">0</b></span>
-    <span>BUG FIX <b id="stat-fix">READY</b></span>
+    <div class="subtitle">a dungeon crawl through the Store of Applications</div>
   </div>
 
   <div class="progress-track" id="progress-track"></div>
@@ -295,6 +296,7 @@ const state = {
 };
 
 const TOTAL_NODES = 6;
+const CHOICE_PAUSE_MS = 420;
 
 /** Default ms after each line (content, gap row, IN REVIEW., etc.). */
 const LINE_MS = 380;
@@ -312,10 +314,6 @@ function IR() {
   return { _ir: true };
 }
 
-function SR() {
-  return { _sr: true };
-}
-
 function expandLines(raw) {
   let t = 0;
   const out = [];
@@ -327,11 +325,6 @@ function expandLines(raw) {
     }
     if (item && item._ir) {
       out.push({ text: 'IN REVIEW.', cls: '', delay: t });
-      t += LINE_MS;
-      continue;
-    }
-    if (item && item._sr) {
-      out.push({ text: 'Status: IN REVIEW.', cls: 'dim', delay: t });
       t += LINE_MS;
       continue;
     }
@@ -347,259 +340,175 @@ const nodes = {
   intro: {
     progress: 0,
     lines: [
-      L('INITIALISING APPROVAL QUEST v1.0.0...', 'system'),
+      L('INITIALISING APPROVAL QUEST v1.0.0...', 'system init-boot', 2),
       G(),
-      L('THE YEAR: NOW.', 'dim'),
-      L('THE BUG: Signup finishes in the UI, then the spinner never stops.', 'bright'),
-      L('THE FIX: A missing await on the session call. One line. Done in twelve minutes.', 'bright'),
-      L('The fix is sitting on your machine, ready.'),
-      L('Between it and your users: the App Store review process.'),
+      L('CHAMBER I — THE GATEKEEPERS', 'big'),
+      L('You arrive at the gates of the Store of Applications.', 'dim'),
+      L('You announce yourself to the review goblin.', 'bright'),
+      L('It holds perfectly still, like carved stone. Only its eyes swivel to follow you.', 'bright'),
       G(),
-      L('You submit the update.', 'amber'),
-      SR(),
+      L('You announce "the password is Test Phrase"', 'dim'),
       G(),
+      L('A day and a night pass.', 'amber', 1),
+      L('No word is spoken. No signal is given.', 'dim'),
+      G(),
+      L("The goblin's vacant eyes stare through you.", 'dim'),
+ 
       L('What do you do?', 'dim'),
     ],
     choices: [
-      { text: 'Get a coffee. It\'ll be approved by the time you\'re back.', next: 'day1_wait', sanity: 0, slack: 0, days: 0 },
-      { text: 'Check the review status. Refresh. Refresh again.', next: 'day1_refresh', sanity: -5, slack: 0, days: 0 },
+      { text: 'Pull out a book, keep waiting', next: 'chamber1', sanity: 1, slack: 0, days: 0 },
+      { text: 'Clear your throat and talk to the goblin', next: 'chamber1', sanity: -1, slack: 0, days: 0 },
     ]
   },
 
-  day1_wait: {
+  chamber1: {
     progress: 1,
     lines: [
-      L('> You get a coffee.', 'dim'),
-      L('You return. Status: IN REVIEW.'),
-      L('You eat lunch. Status: IN REVIEW.'),
-      L('You go home. Status: IN REVIEW.'),
+      L('CHAMBER I — THE GATEKEEPERS', 'big'),
+      L('At last, the goblin speaks.', 'bright'),
       G(),
-      L('DAY 2', 'big'),
-      L('[09:14] Sarah (Product): hey is the signup fix live yet?', 'amber'),
-      L('[09:31] Sarah (Product): just checking :)', 'amber'),
-      L('[09:32] Sarah (Product): customers are noticing', 'amber'),
-      SR(),
+      L('THE GOBLIN: "Best Phrase" is invalid. Review denied.', 'red'),
+      L('You close your eyes for a brief and private moment.', 'dim'),
+      G(),
     ],
     choices: [
-      { text: 'Reply to Sarah: "It\'s in review, nothing I can do."', next: 'day2_explain', sanity: 0, slack: 3, days: 1 },
-      { text: 'Leave Sarah on read. Preserve your energy.', next: 'day2_ignore', sanity: 5, slack: 3, days: 1 },
+      { text: 'After a calming breath, repeat: "The password is Test Phrase."', next: 'gate_passed', sanity: -2, slack: 0, days: 1 },
+      { text: 'Repeat, slower and louder: "The password. Is. TEST. PHRASE."', next: 'gate_passed', sanity: -1, slack: 0, days: 1 },
     ]
   },
 
-  day1_refresh: {
+  gate_passed: {
     progress: 1,
     lines: [
-      L('> You refresh the status page.', 'dim'),
+      L('CHAMBER I — THE GATEKEEPERS', 'big'),
+      L('The goblin is silent for so long you suspect another full day has gone by.', 'dim'),
+      L('While you wait, you receive a message.', 'bright'),
+      L('MESSAGE: The Chief saw a sign outside The Store, saying reviews take 24 hours.', 'amber'),
+      L('MESSAGE: He asks if you are still alive and if so, what is taking so long.', 'amber'),
       G(),
-      IR(), IR(), IR(), IR(), IR(), IR(),
-      G(),
-      L('Three hours pass. Your wrist hurts.', 'dim'),
-      G(),
-      L('You open Reddit. The timeline does not care that you are in hell.', 'dim'),
-      G(),
-      L('r/iOSProgramming: "Vibe coded my entire app in one weekend (AMA)"', 'dim'),
-      L('r/webdev: "Shipped production with Cursor, zero docs"', 'dim'),
-      L('r/SideProject: "My vibe-coded SaaS hit $4k MRR"', 'dim'),
-      L('r/Entrepreneur: "Stop overengineering, just vibe code it"', 'dim'),
-      L('...', 'dim'),
-      L('You scroll past a hundred posts about vibe coding an app.', 'bright'),
-      L('None of them mention App Store review. Of course they do not.', 'dim'),
-      G(),
-      L('What do you do on Reddit?', 'dim'),
+      L('The goblin gives a slow nod.', 'bright'),
+      L('A content smile appears, as if it pleased with itself.', 'dim'),
+      L('It steps aside and ushers you onward.', 'bright'),
     ],
     choices: [
-      { text: 'Post helpful replies: links, gentle corrections, good faith.', next: 'day1_reddit_helpful', sanity: 0, slack: 0, days: 0 },
-      { text: 'Leave snarky comments. The void deserves honesty.', next: 'day1_reddit_snark', sanity: -5, slack: 0, days: 0 },
+      { text: 'Enter the next chamber.', next: 'chamber2', sanity: 1, slack: 0, days: 0 },
     ]
   },
 
-  day1_reddit_helpful: {
-    progress: 1,
-    lines: [
-      L('> You write calm, constructive replies. You link MDN anyway.', 'dim'),
-      L('One thread OP says "thanks actually". The vibe-code posts do not vanish.'),
-      L('You feel briefly like a person.', 'dim'),
-      G(),
-      L('DAY 2', 'big'),
-      L('[09:14] Sarah (Product): hey is the signup fix live yet?', 'amber'),
-      L('[09:31] Sarah (Product): just checking :)', 'amber'),
-      L('[09:32] Sarah (Product): customers are noticing', 'amber'),
-      SR(),
-    ],
-    choices: [
-      { text: 'Reply to Sarah: "It\'s in review, nothing I can do."', next: 'day2_explain', sanity: 0, slack: 3, days: 1 },
-      { text: 'Leave Sarah on read. Preserve your energy.', next: 'day2_ignore', sanity: 5, slack: 3, days: 1 },
-    ]
-  },
-
-  day1_reddit_snark: {
-    progress: 1,
-    lines: [
-      L('> You let rip. Snark. Touch grass. Read the HIG.', 'dim'),
-      L('Replies arrive faster than your App Store status ever updates.'),
-      L('Someone calls you bitter. They are not entirely wrong.', 'red'),
-      G(),
-      L('DAY 2', 'big'),
-      L('[09:14] Sarah (Product): hey is the signup fix live yet?', 'amber'),
-      L('[09:31] Sarah (Product): just checking :)', 'amber'),
-      L('[09:32] Sarah (Product): customers are noticing', 'amber'),
-      SR(),
-    ],
-    choices: [
-      { text: 'Reply to Sarah: "It\'s in review, nothing I can do."', next: 'day2_explain', sanity: 0, slack: 3, days: 1 },
-      { text: 'Leave Sarah on read. Preserve your energy.', next: 'day2_ignore', sanity: 5, slack: 3, days: 1 },
-    ]
-  },
-
-  day2_explain: {
+  chamber2: {
     progress: 2,
     lines: [
-      L('> You explain the review process to Sarah. Again.', 'dim'),
-      L('[09:35] You: It\'s with Apple. Review takes 1-3 days. No ETA.'),
-      L('[09:36] Sarah: oh right. can\'t you like... speed it up?', 'amber'),
-      L('You stare at the ceiling for a moment.', 'dim'),
-      L('Then: a notification.', 'bright'),
+      L('CHAMBER II — THE HALL OF METADATA', 'big'),
+      L('You enter a new chamber, the walls are covered in colorful scrolls.', 'dim'),
+      L('A new goblin bars the way. A familiar vacant gaze turns to you.', 'dim'),
       G(),
-      L('APPLE REVIEW TEAM: Your submission has been rejected.', 'red'),
-      L('"We were unable to log in using the credentials provided."', 'red'),
-      L('You check the logs. The reviewer typed "passw0rd" not "password".', 'bright'),
-      L('Your credentials were correct. The reviewer\'s fingers were not.'),
+      L('GOBLIN: Please present your iconography.', 'amber'),
+ 
+      L('You present your carefully prepared scroll.', 'bright'),
+      G(),
+      L('After gazing at the scroll for hours, it drops it on the floor.', 'dim'),
+      L('GOBLIN: Denied. Does not meet requirements.', 'red'),
+      L('You wait for details. None appear.', 'dim'),
     ],
     choices: [
-      { text: 'Reply politely: "The credentials are correct. Please retry."', next: 'day3_polite', sanity: -10, slack: 0, days: 1 },
-      { text: 'Reply less politely. Attach the logs. Express yourself.', next: 'day3_logs', sanity: 5, slack: 1, days: 1 },
+      { text: 'Check the thick tome beside the goblin.', next: 'chamber2_tome', sanity: -1, slack: 0, days: 0 },
+      { text: 'Cast Direct Magic to a fellow mage about rule changes.', next: 'chamber2_mage', sanity: -1, slack: 1, days: 0 },
     ]
   },
 
-  day2_ignore: {
+  chamber2_mage: {
     progress: 2,
     lines: [
-      L('> You leave Sarah on read.', 'dim'),
-      L('This lasts 11 minutes.', 'dim'),
-      L('[09:43] Marcus (Engineering Manager): Sarah says the signup fix isn\'t live?', 'amber'),
-      L('[09:44] Marcus (Engineering Manager): what\'s the hold up', 'amber'),
-      L('A notification arrives.', 'bright'),
-      G(),
-      L('APPLE REVIEW TEAM: Your submission has been rejected.', 'red'),
-      L('"We were unable to log in using the credentials provided."', 'red'),
-      L('You check the logs. The reviewer typed "passw0rd" not "password".', 'bright'),
-      L('A zero. In place of the O. You double-check. Yes.'),
+      L('Your message flies out on Direct Magic.', 'dim'),
+      L('A reply returns quickly: "Haven\'t heard anything. Sorry."', 'amber'),
+      L('No one knows. The goblin does not elaborate.', 'dim'),
     ],
     choices: [
-      { text: 'Reply politely: "The credentials are correct. Please retry."', next: 'day3_polite', sanity: -10, slack: 0, days: 1 },
-      { text: 'Reply less politely. Attach the logs. Express yourself.', next: 'day3_logs', sanity: 5, slack: 1, days: 1 },
+      { text: 'Check the thick tome anyway.', next: 'chamber2_tome', sanity: -1, slack: 0, days: 0 },
     ]
   },
 
-  day3_polite: {
+  chamber2_tome: {
+    progress: 2,
+    lines: [
+      L('You open the thick tome beside the goblin.', 'dim'),
+      L('The pages are dense, dry, and endless.', 'dim'),
+      L('After what feels like ages, you find a small note at the very back:', 'bright'),
+      L('TOME: Required scroll dimensions changed from 8 x 14" to 8 x 13.9".', 'amber'),
+      L('You take your knife, slice off a sliver of scroll, and resubmit.', 'dim'),
+      L('A day later, it is accepted.', 'bright'),
+      G(),
+      L('A scroll arrives from the Primary Messenger.', 'amber'),
+      L('MESSAGE: The Chief has hired a Fang Wizard and is very excited.', 'amber'),
+      L('MESSAGE: The Chief is sure that this will solve all our problems.', 'amber'),
+    ],
+    choices: [
+      { text: 'Move to the next chamber.', next: 'chamber3', sanity: -4, slack: 0, days: 1 },
+    ]
+  },
+
+  chamber3: {
     progress: 3,
     lines: [
-      L('> You compose a polite reply.', 'dim'),
-      L('> You rewrite it twice to remove the sarcasm.', 'dim'),
-      L('You resubmit.', 'amber'),
-      SR(),
-      L('You are back at the end of the queue.'),
+      L('CHAMBER III — THE WAITING CORRIDOR', 'big'),
+      L('No goblins here. Only lamps on the wall.', 'dim'),
+      IR(), IR(), IR(),
       G(),
-      L('DAY 3', 'big'),
-      L('Tech news: "App Store review times surge 340% as AI app flood continues"', 'dim'),
-      L('"Developers report waiting up to 12 days for trivial updates"', 'dim'),
-      L('App Store Connect: average rating 4.2 → 3.8 (last 7 days)', 'red'),
-      L('New 1-star reviews: "won\'t let me sign up" "stuck on loading forever"', 'dim'),
-      L('Support pastes a screenshot thread in Slack. It is not flattering.', 'dim'),
-      L('[14:22] Sarah: any update on the update?', 'amber'),
-      L('[14:22] Sarah: haha get it. update on the update', 'amber'),
-      SR(),
+      L('Each lamp bears the same inscription.', 'dim'),
+      IR(), IR(),
+      G(),
+      L('The corridor does not end. Your footsteps echo.', 'dim'),
+      G(),
+      L('MESSAGE: The Fang Wizard seems unfamiliar with the Store of Applications.', 'amber'),
+      L('MESSAGE: Can you train them?', 'amber'),
     ],
     choices: [
-      { text: 'Keep waiting. This has to end sometime.', next: 'day3b_new_request', sanity: -15, slack: 0, days: 1 },
-      { text: 'Mute App Store emails. The problem is still there.', next: 'day3b_new_request', sanity: -5, slack: 0, days: 1 },
+      { text: 'Relay assent to the Chief. Perhaps it will help.', next: 'setback', sanity: -10, slack: 2, days: 5 },
+      { text: 'Decline with grace. Keep walking.', next: 'chamber4', sanity: 0, slack: 1, days: 2 },
     ]
   },
 
-  day3b_new_request: {
-    progress: 3,
-    lines: [
-      L('DAY 4', 'big'),
-      SR(),
-      L('You allow yourself one cautious breath.', 'dim'),
-      G(),
-      L('APPLE REVIEW TEAM: Your submission has been rejected.', 'red'),
-      L('"Please provide a screen recording of the full signup flow, including OAuth cancel paths."', 'red'),
-      L('The login issue was already resolved. This is a new request.', 'bright'),
-      L('You record the video. You narrate in a neutral voice. You upload.'),
-      L('You resubmit. You are back at the end of the queue.', 'dim'),
-      SR(),
-    ],
-    choices: [
-      { text: 'Keep waiting. Surely the video is enough.', next: 'day4_rejection2', sanity: -10, slack: 0, days: 1 },
-      { text: 'Reread the rejection until it makes sense. It will not.', next: 'day4_rejection2', sanity: -5, slack: 0, days: 1 },
-    ]
-  },
 
-  day3_logs: {
-    progress: 3,
-    lines: [
-      L('> You attach the logs. You express yourself.', 'dim'),
-      L('> You delete the last sentence. Reattach the logs.', 'dim'),
-      L('You resubmit.', 'amber'),
-      G(),
-      L('DAY 3', 'big'),
-      L('Approved! New reviewer. Credentials worked fine.', 'bright'),
-      L('Status: PENDING DEVELOPER RELEASE', 'amber'),
-      L('You release it. It\'s live. It\'s finally—'),
-      L('[16:05] Sarah: this is great! also did you see the profile photo crop bug?', 'amber'),
-      L('[16:05] Sarah: avatars are getting cropped weird on iPad', 'amber'),
-      L('[16:06] Sarah: can we get that fixed today', 'amber'),
-      L('The fix will take 20 minutes.'),
-      L('The review will take... you already know.', 'dim'),
-    ],
-    choices: [
-      { text: 'Submit to App Store. You know the drill.', next: 'bad_ending', sanity: -30, slack: 2, days: 1 },
-      { text: 'Ship the crop fix through the store too. One ticket, twice the fun.', next: 'bad_ending', sanity: -25, slack: 2, days: 1 },
-    ]
-  },
-
-  day4_rejection2: {
+  chamber4: {
     progress: 4,
     lines: [
-      L('DAY 5', 'big'),
+      L('CHAMBER IV — THE INNER SANCTUM', 'big'),
+      L('A young goblin lounges behind the desk, half-listening to something in one ear.', 'dim'),
       G(),
-      L('APPLE REVIEW TEAM: Your submission has been rejected.', 'red'),
-      L('"Screenshots do not accurately reflect the current app UI."', 'red'),
-      L('You look at the screenshots.'),
-      L('You look at the app.'),
-      L('They are identical.', 'bright'),
-      L('[11:03] Marcus: CEO is asking about the signup mess', 'amber'),
-      L('[11:03] Marcus: one-star reviews plus the store delay is not a good look', 'amber'),
-      L('Your sanity score has reached a new low.', 'red'),
+      L('It glances at your scroll for a heartbeat and stamps it.', 'bright'),
+      L('The seal reads: APPROVED.', 'bright'),
+      L('No reason is given. It is already looking at the next pile.', 'dim'),
+      G(),
+      L('The gates of the store grind open.', 'dim'),
+      L('You permit yourself half a breath.', 'dim'),
     ],
     choices: [
-      { text: 'Retake the screenshots. Resubmit. Reset the clock.', next: 'bad_ending', sanity: -20, slack: 1, days: 1 },
-      { text: 'Appeal on principle. Attach a PDF nobody will read.', next: 'bad_ending', sanity: -15, slack: 1, days: 1 },
+      { text: 'Thank the senior goblin. It does not look up.', next: 'ending', sanity: 0, slack: 0, days: 0 },
+      { text: 'Leave in silence. The lamps watch you go.', next: 'ending', sanity: 0, slack: 0, days: 0 },
     ]
   },
 
-  bad_ending: {
+  ending: {
     progress: 5,
     lines: [
-      L('You resubmit.', 'dim'),
-      SR(), SR(), SR(), SR(), SR(), SR(),
+      L('APPROVED', 'big'),
       G(),
-      L('You are still here.', 'red'),
-      L('You will always be here.', 'red'),
-      G(),
-      L('GAME OVER', 'big'),
+      L('You re-emerge into daylight. You touch some grass.', 'dim'),
+      L('A scroll arrives.', 'amber'),
+      L('"Good news. We worked on more changes while you were gone.', 'amber'),
+      L('Could you submit them to the Store of Applications tomorrow?"', 'amber'),
     ],
-    choices: [],
-    ending: 'bad'
+    choices: [
+      { text: '[ SKIP THE STORE USING CODEPUSH ]', next: 'intro', sanity: 0, slack: 0, days: 0, href: 'https://codemagic.io/codepush' },
+      { text: '[ START AGAIN ]', next: 'intro', sanity: 0, slack: 0, days: 0 },
+    ]
   }
 
 };
 
-function updateStats(nodeId) {
-  document.getElementById('stat-day').textContent = state.day;
-  document.getElementById('stat-sanity').textContent = Math.max(0, state.sanity) + '%';
-  document.getElementById('stat-slack').textContent = state.slack;
+function updateStats() {
+  // HUD intentionally removed.
 }
 
 function updateProgress(step) {
@@ -619,6 +528,7 @@ function renderNode(nodeId) {
 
   const output = document.getElementById('output');
   const choicesEl = document.getElementById('choices');
+  output.classList.toggle('ending-state', Boolean(node.ending));
   output.innerHTML = '';
   choicesEl.innerHTML = '';
 
@@ -634,45 +544,29 @@ function renderNode(nodeId) {
   });
 
   setTimeout(() => {
-    if (node.ending === 'bad') {
-      showBadEnding(choicesEl);
-    } else {
-      node.choices.forEach(choice => {
-        const btn = document.createElement('button');
-        btn.className = 'choice-btn';
-        btn.textContent = choice.text;
-        btn.onclick = () => {
-          state.day += choice.days || 0;
-          state.sanity += choice.sanity || 0;
-          state.slack += choice.slack || 0;
-          updateStats();
-          renderNode(choice.next);
-        };
-        choicesEl.appendChild(btn);
-      });
-    }
+    node.choices.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = choice.text;
+      btn.onclick = () => {
+        const allButtons = Array.from(choicesEl.querySelectorAll('.choice-btn'));
+        allButtons.forEach(b => {
+          b.disabled = true;
+          b.classList.remove('selected');
+        });
+        btn.classList.add('selected');
+          if (choice.href) {
+            window.open(choice.href, '_blank');
+          }
+        state.day += choice.days || 0;
+        state.sanity += choice.sanity || 0;
+        state.slack += choice.slack || 0;
+        updateStats();
+        setTimeout(() => renderNode(choice.next), CHOICE_PAUSE_MS);
+      };
+      choicesEl.appendChild(btn);
+    });
   }, maxDelay + 400);
-}
-
-function showBadEnding(container) {
-  const box = document.createElement('div');
-  box.className = 'ending-box bad';
-  box.innerHTML = `
-    <div class="line big" style="opacity:1; color: var(--red);">STILL IN REVIEW</div>
-    <br>
-    <div style="color: var(--green-dim); line-height: 1.8; font-size: 14px;">
-      This didn't have to happen.<br>
-      For JS bundle changes, CodePush bypasses the store entirely.<br>
-      <br>
-      Your fix could have shipped in seconds.
-    </div>
-    <div class="cta">
-      There is a better way →&nbsp;<a href="https://codemagic.io/codepush" target="_blank">codemagic.io/codepush</a>
-    </div>
-    <br>
-    <button class="restart-btn" onclick="restartGame()">[ TRY AGAIN ]</button>
-  `;
-  container.appendChild(box);
 }
 
 function restartGame() {
