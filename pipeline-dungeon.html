@@ -11,7 +11,7 @@
     * { margin: 0; box-sizing: border-box; }
     html, body {
       height: 100%;
-      background: #0f380f;
+      background: #121212;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -29,22 +29,22 @@
       max-height: 100vh;
       width: auto;
       height: auto;
-      border: 4px solid #306230;
-      box-shadow: 0 0 0 2px #0f380f, 0 0 24px rgba(0,0,0,0.5);
+      border: 4px solid #5a5a5a;
+      box-shadow: 0 0 0 2px #1a1a1a, 0 0 24px rgba(0,0,0,0.55);
     }
     #finale {
       display: none;
       position: absolute;
       left: 50%;
-      bottom: 12px;
+      bottom: 14px;
       transform: translateX(-50%);
       z-index: 10;
       text-align: center;
-      font-size: 8px;
+      font-size: 11px;
       line-height: 1.6;
     }
     #finale a {
-      color: #9bbc0f;
+      color: #d8d8d8;
     }
     #finale.visible { display: block; }
     #hint {
@@ -52,15 +52,15 @@
       bottom: 8px;
       left: 0; right: 0;
       text-align: center;
-      font-size: 6px;
-      color: #306230;
+      font-size: 8px;
+      color: #6a6a6a;
       pointer-events: none;
     }
   </style>
 </head>
 <body>
   <div id="wrap">
-    <canvas id="game" width="320" height="304" aria-label="Pipeline Dungeon game"></canvas>
+    <canvas id="game" width="480" height="456" aria-label="Pipeline Dungeon game"></canvas>
     <div id="finale">
       <a href="https://codemagic.io" target="_blank" rel="noopener noreferrer">codemagic.io</a>
     </div>
@@ -72,17 +72,27 @@
   'use strict';
 
   /** Tunables */
-  const TILE = 32;
+  const TILE = 48;
   const GW = 10;
   const GH = 8;
-  const HUD_H = 48;
+  const HUD_H = Math.round(TILE * 1.5);
   const CANVAS_W = GW * TILE;
   const CANVAS_H = GH * TILE + HUD_H;
   const KEY_REPEAT_MS = 140;
   const DEBUG = /[?&]debug=1(?:&|$)/.test(location.search);
 
-  /** Game Boy greens: 0 darkest … 3 lightest */
-  const P = ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'];
+  /** DMG-style greyscale: 0 darkest … 3 lightest */
+  const P = ['#1a1a1a', '#4a4a4a', '#9a9a9a', '#d8d8d8'];
+  const OVERLAY_BG = 'rgba(26,26,26,0.94)';
+  const FINALE_DIM = 'rgba(26,26,26,0.88)';
+
+  /** Press Start 2P scales with tile (readable on larger canvas) */
+  const FONT = {
+    xs: Math.max(6, Math.floor(TILE * 0.167)) + 'px',
+    sm: Math.max(7, Math.floor(TILE * 0.187)) + 'px',
+    md: Math.max(8, Math.floor(TILE * 0.208)) + 'px',
+    lg: Math.max(10, Math.floor(TILE * 0.25)) + 'px',
+  };
 
   const FACINGS = { up: 0, right: 1, down: 2, left: 3 };
   const DX = [0, 1, 0, -1];
@@ -672,27 +682,30 @@
   function drawFloorTile(tx, ty) {
     var x = tx * TILE;
     var y = ty * TILE;
+    var inset = Math.max(2, Math.floor(TILE * 0.125));
     var alt = (tx + ty) % 2;
     ctx.fillStyle = alt ? P[3] : P[2];
     ctx.fillRect(x, y, TILE, TILE);
     ctx.strokeStyle = P[1];
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x + 4, y + 4, TILE - 8, TILE - 8);
+    ctx.lineWidth = Math.max(1, Math.floor(TILE / 32));
+    ctx.strokeRect(x + inset, y + inset, TILE - inset * 2, TILE - inset * 2);
   }
 
   function drawWallTile(tx, ty) {
     var x = tx * TILE;
     var y = ty * TILE;
+    var b = Math.max(2, Math.floor(TILE / 16));
     ctx.fillStyle = P[1];
     ctx.fillRect(x, y, TILE, TILE);
     ctx.fillStyle = P[2];
-    ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+    ctx.fillRect(x + b, y + b, TILE - b * 2, TILE - b * 2);
     ctx.fillStyle = P[0];
-    ctx.fillRect(x + 4, y + 4, TILE - 8, TILE - 8);
+    ctx.fillRect(x + b * 2, y + b * 2, TILE - b * 4, TILE - b * 4);
     ctx.fillStyle = P[3];
     if ((tx + ty) % 3 === 0) {
-      ctx.fillRect(x + 10, y + 8, 4, 4);
-      ctx.fillRect(x + 18, y + 20, 4, 4);
+      var riv = Math.max(3, Math.floor(TILE / 10));
+      ctx.fillRect(x + TILE * 0.3, y + TILE * 0.22, riv, riv);
+      ctx.fillRect(x + TILE * 0.55, y + TILE * 0.62, riv, riv);
     }
   }
 
@@ -704,10 +717,12 @@
       return;
     }
     drawFloorTile(tx, ty);
+    var mx = Math.floor(TILE * 0.25);
+    var my = Math.floor(TILE * 0.125);
     ctx.fillStyle = P[0];
-    ctx.fillRect(x + 8, y + 4, 16, 24);
+    ctx.fillRect(x + mx, y + my, TILE - mx * 2, TILE - my * 2);
     ctx.fillStyle = P[2];
-    ctx.fillRect(x + 10, y + 8, 12, 16);
+    ctx.fillRect(x + mx + 2, y + my + 4, TILE - mx * 2 - 4, TILE - my * 2 - 8);
   }
 
   function drawWorld() {
@@ -728,120 +743,354 @@
 
     r.entities.forEach(function (e) {
       if (e._removed) return;
-      var ex = e.x * TILE;
-      var ey = e.y * TILE;
-      if (e.kind === 'dave') {
-        ctx.fillStyle = P[0];
-        ctx.fillRect(ex + 4, ey + 6, TILE - 8, TILE - 10);
-        ctx.fillStyle = P[3];
-        ctx.font = '8px "Press Start 2P", monospace';
-        ctx.fillText('D', ex + 10, ey + 22);
-      } else if (e.kind === 'pickup') {
-        if (e.subtype === 'scrap') {
-          ctx.fillStyle = P[1];
-          ctx.fillRect(ex + 8, ey + 12, 16, 12);
-          ctx.fillStyle = P[3];
-          ctx.font = '6px "Press Start 2P", monospace';
-          ctx.fillText('Rb', ex + 10, ey + 22);
-        } else if (e.subtype === 'email') {
-          ctx.fillStyle = P[2];
-          ctx.fillRect(ex + 6, ey + 10, 20, 14);
-          ctx.fillStyle = P[0];
-          ctx.font = '6px "Press Start 2P", monospace';
-          ctx.fillText('@', ex + 12, ey + 22);
-        } else if (e.subtype === 'vm_a' || e.subtype === 'vm_b') {
-          ctx.fillStyle = P[1];
-          ctx.fillRect(ex + 10, ey + 8, 12, 18);
-          ctx.fillStyle = P[3];
-          ctx.font = '6px "Press Start 2P", monospace';
-          ctx.fillText('vm', ex + 8, ey + 22);
-        }
-      } else if (e.kind === 'interact') {
-        if (e.subtype === 'bundler') {
-          ctx.fillStyle = P[0];
-          ctx.fillRect(ex + 4, ey + 4, TILE - 8, TILE - 8);
-          ctx.fillStyle = P[2];
-          ctx.font = '7px "Press Start 2P", monospace';
-          ctx.fillText('$', ex + 12, ey + 22);
-        } else if (e.subtype === 'cert') {
-          ctx.fillStyle = P[1];
-          ctx.fillRect(ex + 2, ey + 4, TILE - 4, TILE - 10);
-          ctx.fillStyle = P[3];
-          ctx.font = '6px "Press Start 2P", monospace';
-          ctx.fillText('C', ex + 12, ey + 18);
-        } else if (e.subtype === 'lock') {
-          ctx.fillStyle = P[0];
-          ctx.beginPath();
-          ctx.arc(ex + TILE / 2, ey + TILE / 2, 12, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = P[2];
-          ctx.font = '8px "Press Start 2P", monospace';
-          ctx.fillText('8', ex + 12, ey + 22);
-        } else if (e.subtype === 'vault') {
-          ctx.fillStyle = P[1];
-          ctx.fillRect(ex + 6, ey + 8, 20, 18);
-          ctx.fillStyle = P[3];
-          ctx.font = '6px "Press Start 2P", monospace';
-          ctx.fillText('?', ex + 12, ey + 22);
-        } else if (e.subtype === 'yaml_read') {
-          ctx.fillStyle = P[0];
-          ctx.fillRect(ex + 2, ey + 6, TILE - 4, TILE - 12);
-          ctx.fillStyle = P[2];
-          ctx.font = '6px "Press Start 2P", monospace';
-          ctx.fillText('#', ex + 12, ey + 20);
-        } else if (e.subtype === 'yaml_judge') {
-          ctx.fillStyle = P[2];
-          ctx.fillRect(ex + 4, ey + 8, TILE - 8, TILE - 14);
-          ctx.fillStyle = P[0];
-          ctx.font = '6px "Press Start 2P", monospace';
-          ctx.fillText('OK', ex + 8, ey + 22);
-        }
-      }
+      drawEntity(e);
     });
 
-    var px = state.px * TILE;
-    var py = state.py * TILE;
-    ctx.fillStyle = P[0];
-    ctx.fillRect(px + 10, py + 8, 12, 18);
+    drawPlayer(state.px * TILE, state.py * TILE, state.facing);
+  }
+
+  /** Folded paper + gem dot */
+  function drawScrapPickup(ex, ey) {
+    var m = TILE * 0.18;
     ctx.fillStyle = P[3];
-    ctx.fillRect(px + 12, py + 10, 8, 6);
-    var fx = state.facing;
-    var sx = px + 16 + DX[fx] * 10;
-    var sy = py + 14 + DY[fx] * 8;
+    ctx.beginPath();
+    ctx.moveTo(ex + m, ey + TILE * 0.35);
+    ctx.lineTo(ex + TILE - m, ey + TILE * 0.28);
+    ctx.lineTo(ex + TILE - m * 0.7, ey + TILE * 0.72);
+    ctx.lineTo(ex + m * 1.2, ey + TILE * 0.78);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = P[0];
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = P[0];
+    ctx.fillRect(ex + TILE * 0.55, ey + TILE * 0.32, TILE * 0.22, TILE * 0.12);
+    ctx.fillStyle = P[1];
+    ctx.beginPath();
+    ctx.arc(ex + TILE * 0.35, ey + TILE * 0.55, TILE * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawEnvelopePickup(ex, ey) {
+    var cx = ex + TILE / 2;
+    var top = ey + TILE * 0.28;
+    var bot = ey + TILE * 0.72;
     ctx.fillStyle = P[2];
-    ctx.fillRect(sx - 2, sy - 2, 4, 10);
+    ctx.beginPath();
+    ctx.moveTo(ex + TILE * 0.2, top);
+    ctx.lineTo(ex + TILE * 0.8, top);
+    ctx.lineTo(ex + TILE * 0.8, bot);
+    ctx.lineTo(ex + TILE * 0.2, bot);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = P[0];
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ex + TILE * 0.2, top);
+    ctx.lineTo(cx, ey + TILE * 0.48);
+    ctx.lineTo(ex + TILE * 0.8, top);
+    ctx.stroke();
+  }
+
+  function drawTapePickup(ex, ey) {
+    var w = TILE * 0.5;
+    var h = TILE * 0.35;
+    var x = ex + (TILE - w) / 2;
+    var y = ey + TILE * 0.32;
+    ctx.fillStyle = P[0];
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = P[2];
+    ctx.fillRect(x + w * 0.08, y + h * 0.2, w * 0.84, h * 0.55);
+    ctx.fillStyle = P[3];
+    ctx.fillRect(x + w * 0.35, y + h * 0.08, w * 0.3, h * 0.84);
+  }
+
+  function drawDavePlaque(ex, ey) {
+    var pad = TILE * 0.12;
+    ctx.fillStyle = P[1];
+    ctx.fillRect(ex + pad, ey + pad * 1.5, TILE - pad * 2, TILE - pad * 2.5);
+    ctx.strokeStyle = P[0];
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ex + pad, ey + pad * 1.5, TILE - pad * 2, TILE - pad * 2.5);
+    ctx.fillStyle = P[3];
+    ctx.beginPath();
+    ctx.arc(ex + TILE * 0.35, ey + TILE * 0.42, TILE * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = P[0];
+    ctx.fillRect(ex + TILE * 0.52, ey + TILE * 0.38, TILE * 0.22, TILE * 0.06);
+    ctx.font = FONT.sm + ' "Press Start 2P", monospace';
+    ctx.fillText('?', ex + TILE * 0.52, ey + TILE * 0.72);
+  }
+
+  function drawBundler(ex, ey) {
+    var p = TILE * 0.14;
+    ctx.fillStyle = P[0];
+    ctx.fillRect(ex + p, ey + p * 1.2, TILE - p * 2, TILE - p * 2.2);
+    ctx.fillStyle = P[2];
+    ctx.fillRect(ex + p * 1.5, ey + p * 1.8, TILE - p * 3, TILE * 0.38);
+    ctx.fillStyle = P[3];
+    ctx.fillRect(ex + p * 2, ey + p * 2.6, TILE - p * 4, TILE * 0.22);
+    ctx.fillStyle = P[1];
+    ctx.fillRect(ex + TILE * 0.42, ey + TILE * 0.62, TILE * 0.16, TILE * 0.08);
+  }
+
+  function drawCertPlaque(ex, ey) {
+    ctx.fillStyle = P[1];
+    ctx.fillRect(ex + TILE * 0.1, ey + TILE * 0.12, TILE * 0.8, TILE * 0.55);
+    ctx.strokeStyle = P[0];
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ex + TILE * 0.1, ey + TILE * 0.12, TILE * 0.8, TILE * 0.55);
+    ctx.fillStyle = P[3];
+    ctx.fillRect(ex + TILE * 0.18, ey + TILE * 0.22, TILE * 0.64, TILE * 0.08);
+    ctx.fillRect(ex + TILE * 0.18, ey + TILE * 0.36, TILE * 0.45, TILE * 0.06);
+    ctx.fillRect(ex + TILE * 0.18, ey + TILE * 0.46, TILE * 0.55, TILE * 0.06);
+  }
+
+  function drawPadlock(ex, ey) {
+    var cx = ex + TILE / 2;
+    var cy = ey + TILE * 0.48;
+    var r = TILE * 0.22;
+    ctx.lineWidth = Math.max(3, TILE / 12);
+    ctx.strokeStyle = P[0];
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI, 0);
+    ctx.stroke();
+    ctx.fillStyle = P[0];
+    ctx.beginPath();
+    ctx.arc(cx, cy + r * 0.2, r * 0.85, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = P[2];
+    ctx.fillRect(cx - r * 0.35, cy + r * 0.15, r * 0.7, r * 0.55);
+  }
+
+  function drawVaultProp(ex, ey) {
+    ctx.fillStyle = P[1];
+    ctx.fillRect(ex + TILE * 0.22, ey + TILE * 0.38, TILE * 0.56, TILE * 0.38);
+    ctx.fillStyle = P[0];
+    ctx.fillRect(ex + TILE * 0.38, ey + TILE * 0.3, TILE * 0.24, TILE * 0.12);
+    ctx.strokeStyle = P[0];
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ex + TILE * 0.22, ey + TILE * 0.38, TILE * 0.56, TILE * 0.38);
+    ctx.fillStyle = P[3];
+    ctx.fillRect(ex + TILE * 0.42, ey + TILE * 0.5, TILE * 0.16, TILE * 0.14);
+  }
+
+  function drawYamlTablet(ex, ey) {
+    ctx.fillStyle = P[0];
+    ctx.fillRect(ex + TILE * 0.12, ey + TILE * 0.18, TILE * 0.76, TILE * 0.62);
+    ctx.fillStyle = P[2];
+    for (var i = 0; i < 4; i++) {
+      ctx.fillRect(ex + TILE * 0.18, ey + TILE * 0.26 + i * TILE * 0.12, TILE * 0.55, TILE * 0.04);
+    }
+    ctx.fillStyle = P[3];
+    ctx.fillRect(ex + TILE * 0.18, ey + TILE * 0.28, TILE * 0.2, TILE * 0.04);
+  }
+
+  function drawYamlJudge(ex, ey) {
+    ctx.fillStyle = P[2];
+    ctx.fillRect(ex + TILE * 0.15, ey + TILE * 0.28, TILE * 0.7, TILE * 0.5);
+    ctx.strokeStyle = P[0];
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ex + TILE * 0.15, ey + TILE * 0.28, TILE * 0.7, TILE * 0.5);
+    ctx.fillStyle = P[0];
+    ctx.font = FONT.md + ' "Press Start 2P", monospace';
+    ctx.fillText('!', ex + TILE * 0.42, ey + TILE * 0.58);
+  }
+
+  function drawEntity(e) {
+    var ex = e.x * TILE;
+    var ey = e.y * TILE;
+    if (e.kind === 'dave') {
+      drawDavePlaque(ex, ey);
+    } else if (e.kind === 'pickup') {
+      if (e.subtype === 'scrap') drawScrapPickup(ex, ey);
+      else if (e.subtype === 'email') drawEnvelopePickup(ex, ey);
+      else if (e.subtype === 'vm_a' || e.subtype === 'vm_b') drawTapePickup(ex, ey);
+    } else if (e.kind === 'interact') {
+      if (e.subtype === 'bundler') drawBundler(ex, ey);
+      else if (e.subtype === 'cert') drawCertPlaque(ex, ey);
+      else if (e.subtype === 'lock') drawPadlock(ex, ey);
+      else if (e.subtype === 'vault') drawVaultProp(ex, ey);
+      else if (e.subtype === 'yaml_read') drawYamlTablet(ex, ey);
+      else if (e.subtype === 'yaml_judge') drawYamlJudge(ex, ey);
+    }
+  }
+
+  /** Top-down hero: head, tunic, boots, shield, sword by facing */
+  function drawPlayer(px, py, facing) {
+    var t = TILE;
+    var cx = px + t * 0.5;
+    var lw = Math.max(2, Math.floor(t / 22));
+
+    ctx.fillStyle = P[0];
+    ctx.beginPath();
+    ctx.ellipse(cx, py + t * 0.9, t * 0.24, t * 0.09, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    var bw = t * 0.14;
+    var bh = t * 0.11;
+    ctx.fillStyle = P[0];
+    ctx.fillRect(cx - t * 0.2 - bw / 2, py + t * 0.7, bw, bh);
+    ctx.fillRect(cx + t * 0.2 - bw / 2, py + t * 0.7, bw, bh);
+
+    ctx.fillStyle = P[1];
+    ctx.fillRect(cx - t * 0.18, py + t * 0.52, t * 0.14, t * 0.24);
+    ctx.fillRect(cx + t * 0.04, py + t * 0.52, t * 0.14, t * 0.24);
+
+    ctx.fillStyle = P[2];
+    ctx.fillRect(cx - t * 0.24, py + t * 0.38, t * 0.48, t * 0.22);
+    ctx.fillStyle = P[1];
+    ctx.fillRect(cx - t * 0.2, py + t * 0.42, t * 0.4, t * 0.16);
+
+    ctx.fillStyle = P[2];
+    ctx.fillRect(cx - t * 0.3, py + t * 0.4, t * 0.6, t * 0.12);
+
+    ctx.fillStyle = P[3];
+    ctx.beginPath();
+    ctx.arc(cx, py + t * 0.28, t * 0.17, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = P[0];
+    ctx.lineWidth = lw;
+    ctx.stroke();
+
+    ctx.fillStyle = P[0];
+    ctx.beginPath();
+    ctx.arc(cx, py + t * 0.22, t * 0.15, Math.PI, 0);
+    ctx.fill();
+
+    var sw = t * 0.16;
+    var sh = t * 0.24;
+    function shield(sx, sy) {
+      ctx.fillStyle = P[2];
+      ctx.fillRect(sx, sy, sw, sh);
+      ctx.strokeStyle = P[0];
+      ctx.lineWidth = lw;
+      ctx.strokeRect(sx, sy, sw, sh);
+      ctx.fillStyle = P[3];
+      ctx.fillRect(sx + sw * 0.2, sy + sh * 0.25, sw * 0.55, sh * 0.45);
+    }
+
+    if (facing === FACINGS.down) shield(cx - t * 0.42, py + t * 0.42);
+    else if (facing === FACINGS.up) shield(cx + t * 0.26, py + t * 0.42);
+    else if (facing === FACINGS.right) shield(cx - t * 0.08, py + t * 0.52);
+    else shield(cx + t * 0.26, py + t * 0.52);
+
+    ctx.fillStyle = P[3];
+    ctx.strokeStyle = P[0];
+    ctx.lineWidth = lw;
+    var bladeW = Math.max(3, t * 0.08);
+    var bladeL = t * 0.32;
+    if (facing === FACINGS.down) {
+      ctx.fillRect(cx - bladeW / 2, py + t * 0.6, bladeW, bladeL);
+      ctx.strokeRect(cx - bladeW / 2, py + t * 0.6, bladeW, bladeL);
+    } else if (facing === FACINGS.up) {
+      ctx.fillRect(cx - bladeW / 2, py + t * 0.08, bladeW, bladeL);
+      ctx.strokeRect(cx - bladeW / 2, py + t * 0.08, bladeW, bladeL);
+    } else if (facing === FACINGS.right) {
+      ctx.fillRect(cx + t * 0.12, py + t * 0.44 - bladeW / 2, bladeL, bladeW);
+      ctx.strokeRect(cx + t * 0.12, py + t * 0.44 - bladeW / 2, bladeL, bladeW);
+    } else {
+      ctx.fillRect(cx - t * 0.12 - bladeL, py + t * 0.44 - bladeW / 2, bladeL, bladeW);
+      ctx.strokeRect(cx - t * 0.12 - bladeL, py + t * 0.44 - bladeW / 2, bladeL, bladeW);
+    }
+  }
+
+  function drawHudGem(bx, by, s, on) {
+    var cx = bx + s / 2;
+    var cy = by + s / 2;
+    ctx.fillStyle = on ? P[3] : P[1];
+    ctx.beginPath();
+    ctx.moveTo(cx, by + 2);
+    ctx.lineTo(bx + s - 3, cy);
+    ctx.lineTo(cx, by + s - 2);
+    ctx.lineTo(bx + 3, cy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = P[0];
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function drawHudMail(bx, by, s, on) {
+    ctx.fillStyle = on ? P[2] : P[0];
+    ctx.fillRect(bx + 2, by + 4, s - 4, s - 6);
+    ctx.strokeStyle = P[3];
+    ctx.strokeRect(bx + 2, by + 4, s - 4, s - 6);
+    ctx.strokeStyle = on ? P[0] : P[2];
+    ctx.beginPath();
+    ctx.moveTo(bx + 2, by + 4);
+    ctx.lineTo(bx + s / 2, by + s * 0.45);
+    ctx.lineTo(bx + s - 2, by + 4);
+    ctx.stroke();
+  }
+
+  function drawHudTape(bx, by, s, on) {
+    ctx.fillStyle = P[0];
+    ctx.fillRect(bx + 3, by + s * 0.35, s - 6, s * 0.38);
+    ctx.fillStyle = on ? P[2] : P[1];
+    ctx.fillRect(bx + 5, by + s * 0.42, s - 10, s * 0.22);
+    ctx.fillStyle = P[3];
+    ctx.fillRect(bx + s * 0.38, by + s * 0.32, s * 0.24, s * 0.44);
+  }
+
+  function drawHudKey(bx, by, s, on) {
+    ctx.fillStyle = on ? P[3] : P[1];
+    ctx.fillRect(bx + s * 0.42, by + 4, 4, s * 0.55);
+    ctx.beginPath();
+    ctx.arc(bx + s * 0.35, by + s * 0.35, s * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = P[0];
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function drawHudScroll(bx, by, s, on) {
+    ctx.fillStyle = on ? P[2] : P[0];
+    ctx.fillRect(bx + 4, by + 3, s - 8, s - 6);
+    ctx.fillStyle = on ? P[0] : P[2];
+    for (var i = 0; i < 3; i++) {
+      ctx.fillRect(bx + 7, by + 7 + i * 5, s - 14, 2);
+    }
   }
 
   function drawHUD() {
     var y0 = GH * TILE;
+    var pad = Math.max(3, Math.floor(TILE / 14));
     ctx.fillStyle = P[1];
     ctx.fillRect(0, y0, CANVAS_W, HUD_H);
     ctx.strokeStyle = P[0];
-    ctx.strokeRect(2, y0 + 2, CANVAS_W - 4, HUD_H - 4);
-    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.strokeRect(pad, y0 + pad, CANVAS_W - pad * 2, HUD_H - pad * 2);
+    ctx.font = FONT.md + ' "Press Start 2P", monospace';
     ctx.fillStyle = P[3];
-    ctx.fillText(room().title, 8, y0 + 14);
+    var titleY = y0 + Math.floor(TILE * 0.42);
+    ctx.fillText(room().title, pad * 3, titleY);
 
-    function icon(ix, label, on) {
-      var bx = 8 + ix * 28;
-      var by = y0 + 18;
-      ctx.fillStyle = on ? P[2] : P[0];
-      ctx.fillRect(bx, by, 22, 22);
-      ctx.strokeStyle = P[3];
-      ctx.strokeRect(bx, by, 22, 22);
-      ctx.fillStyle = on ? P[0] : P[1];
-      ctx.font = '6px "Press Start 2P", monospace';
-      ctx.fillText(label, bx + 4, by + 15);
+    var slot = Math.floor(TILE * 0.58);
+    var gap = Math.floor(TILE * 0.22);
+    var rowY = y0 + Math.floor(TILE * 0.62);
+    var startX = pad * 3;
+
+    function slotBox(ix, drawFn, on) {
+      var bx = startX + ix * (slot + gap);
+      var by = rowY;
+      ctx.fillStyle = P[0];
+      ctx.fillRect(bx, by, slot, slot);
+      ctx.strokeStyle = on ? P[3] : P[2];
+      ctx.lineWidth = 2;
+      ctx.strokeRect(bx, by, slot, slot);
+      drawFn(bx + 2, by + 2, slot - 4, on);
     }
-    icon(0, 'G', state.inv.scraps.length > 0);
-    icon(1, '@', state.inv.email);
-    icon(2, 'V', state.inv.vm_a && state.inv.vm_b);
-    icon(3, 'K', state.progress.vault.solved || state.roomIndex > 2);
-    icon(4, 'Y', Object.keys(state.progress.yaml.readIds).length > 0);
 
-    ctx.fillStyle = P[3];
-    ctx.font = '5px "Press Start 2P", monospace';
-    ctx.fillText('inv', 8, y0 + 46);
+    slotBox(0, drawHudGem, state.inv.scraps.length > 0);
+    slotBox(1, drawHudMail, state.inv.email);
+    slotBox(2, drawHudTape, state.inv.vm_a && state.inv.vm_b);
+    slotBox(3, drawHudKey, state.progress.vault.solved || state.roomIndex > 2);
+    slotBox(4, drawHudScroll, Object.keys(state.progress.yaml.readIds).length > 0);
+
+    ctx.fillStyle = P[2];
+    ctx.font = FONT.xs + ' "Press Start 2P", monospace';
+    ctx.fillText('INV', startX, y0 + HUD_H - pad * 2);
   }
 
   function wrapText(text, maxW) {
@@ -864,105 +1113,129 @@
   function drawDialog() {
     if (state.dialog.length === 0) return;
     var msg = state.dialog[0];
-    var boxH = 72;
-    var boxY = GH * TILE - boxH - 4;
+    var boxH = Math.floor(TILE * 2.65);
+    var boxY = GH * TILE - boxH - Math.floor(TILE * 0.12);
+    var inset = Math.floor(TILE * 0.12);
     ctx.fillStyle = P[0];
-    ctx.fillRect(4, boxY, CANVAS_W - 8, boxH);
+    ctx.fillRect(inset, boxY, CANVAS_W - inset * 2, boxH);
     ctx.strokeStyle = P[2];
-    ctx.lineWidth = 2;
-    ctx.strokeRect(4, boxY, CANVAS_W - 8, boxH);
+    ctx.lineWidth = Math.max(2, Math.floor(TILE / 18));
+    ctx.strokeRect(inset, boxY, CANVAS_W - inset * 2, boxH);
     ctx.fillStyle = P[3];
-    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.font = FONT.sm + ' "Press Start 2P", monospace';
     var lines = [];
-    wrapText(msg, CANVAS_W - 24).forEach(function (ln) { lines.push(ln); });
-    lines = lines.slice(0, 5);
+    wrapText(msg, CANVAS_W - inset * 4).forEach(function (ln) { lines.push(ln); });
+    var lineStep = Math.floor(TILE * 0.34);
+    lines = lines.slice(0, 6);
     for (var i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], 10, boxY + 12 + i * 10);
+      ctx.fillText(lines[i], inset * 2, boxY + Math.floor(TILE * 0.38) + i * lineStep);
     }
     ctx.fillStyle = P[2];
-    ctx.fillText('SPACE', CANVAS_W - 52, boxY + boxH - 8);
+    ctx.font = FONT.xs + ' "Press Start 2P", monospace';
+    ctx.fillText('SPACE', CANVAS_W - Math.floor(TILE * 1.65), boxY + boxH - Math.floor(TILE * 0.2));
   }
 
   function drawGemOverlay() {
     if (state.mode !== 'puzzleGem' || !state.gemUI) return;
     var g = state.gemUI;
     var vers = state.inv.scraps.map(function (s) { return s.v; });
-    ctx.fillStyle = 'rgba(15,56,15,0.92)';
-    ctx.fillRect(8, 40, CANVAS_W - 16, 120);
+    var inset = Math.floor(TILE * 0.17);
+    var oy = Math.floor(TILE * 0.85);
+    var oh = Math.floor(TILE * 2.85);
+    ctx.fillStyle = OVERLAY_BG;
+    ctx.fillRect(inset, oy, CANVAS_W - inset * 2, oh);
     ctx.strokeStyle = P[2];
-    ctx.strokeRect(8, 40, CANVAS_W - 16, 120);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(inset, oy, CANVAS_W - inset * 2, oh);
     ctx.fillStyle = P[3];
-    ctx.font = '6px "Press Start 2P", monospace';
-    ctx.fillText('Bundler order L/R slot U/D ver', 14, 56);
+    ctx.font = FONT.sm + ' "Press Start 2P", monospace';
+    ctx.fillText('Bundler: L/R slot', inset * 2, oy + Math.floor(TILE * 0.55));
+    ctx.fillText('U/D version · SPACE ok', inset * 2, oy + Math.floor(TILE * 0.95));
+    var slotW = Math.floor((CANVAS_W - inset * 6) / 3);
+    var cy = oy + Math.floor(TILE * 1.35);
     for (var s = 0; s < 3; s++) {
-      var cx = 24 + s * 90;
-      var cy = 90;
+      var cx = inset * 2 + s * (slotW + inset);
       if (g.slot === s) {
         ctx.strokeStyle = P[3];
-        ctx.strokeRect(cx - 4, cy - 4, 72, 36);
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx - 3, cy - 3, slotW + 6, Math.floor(TILE * 0.85));
       }
       ctx.fillStyle = P[2];
-      ctx.fillRect(cx, cy, 64, 28);
+      ctx.fillRect(cx, cy, slotW, Math.floor(TILE * 0.75));
       ctx.fillStyle = P[0];
-      ctx.fillText(vers[g.choices[s]], cx + 6, cy + 18);
+      ctx.font = FONT.xs + ' "Press Start 2P", monospace';
+      ctx.fillText(vers[g.choices[s]], cx + 6, cy + Math.floor(TILE * 0.52));
     }
     ctx.fillStyle = P[3];
-    ctx.fillText('SPACE submit', 14, 148);
+    ctx.font = FONT.xs + ' "Press Start 2P", monospace';
+    ctx.fillText('SPACE submit', inset * 2, oy + oh - Math.floor(TILE * 0.35));
   }
 
   function drawPassOverlay() {
     if (state.mode !== 'puzzlePass' || !state.passUI) return;
     var p = state.passUI;
     var fr = PUZZLE_CONFIG.passphrase.fragments;
-    ctx.fillStyle = 'rgba(15,56,15,0.92)';
-    ctx.fillRect(8, 48, CANVAS_W - 16, 100);
+    var inset = Math.floor(TILE * 0.17);
+    var oy = Math.floor(TILE * 1.0);
+    var oh = Math.floor(TILE * 2.55);
+    ctx.fillStyle = OVERLAY_BG;
+    ctx.fillRect(inset, oy, CANVAS_W - inset * 2, oh);
     ctx.strokeStyle = P[2];
-    ctx.strokeRect(8, 48, CANVAS_W - 16, 100);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(inset, oy, CANVAS_W - inset * 2, oh);
     ctx.fillStyle = P[3];
-    ctx.font = '6px "Press Start 2P", monospace';
-    ctx.fillText('Order fragments L/R pick U/D swap', 12, 64);
+    ctx.font = FONT.sm + ' "Press Start 2P", monospace';
+    ctx.fillText('L/R pick slot · U/D swap', inset * 2, oy + Math.floor(TILE * 0.55));
     var parts = [fr[p.order[0]], fr[p.order[1]], PUZZLE_CONFIG.passphrase.tail];
+    var slotW = Math.floor((CANVAS_W - inset * 5) / 2);
+    var cy = oy + Math.floor(TILE * 1.15);
     for (var i = 0; i < 2; i++) {
-      var cx = 40 + i * 100;
-      var cy = 100;
+      var cx = inset * 2 + i * (slotW + inset);
       if (p.slot === i) {
         ctx.strokeStyle = P[3];
-        ctx.strokeRect(cx - 4, cy - 4, 88, 28);
+        ctx.strokeRect(cx - 3, cy - 3, slotW + 6, Math.floor(TILE * 0.62));
       }
       ctx.fillStyle = P[2];
-      ctx.fillRect(cx, cy, 80, 20);
+      ctx.fillRect(cx, cy, slotW, Math.floor(TILE * 0.52));
       ctx.fillStyle = P[0];
-      ctx.font = '6px "Press Start 2P", monospace';
-      ctx.fillText(parts[i], cx + 4, cy + 14);
+      ctx.font = FONT.xs + ' "Press Start 2P", monospace';
+      ctx.fillText(parts[i], cx + 6, cy + Math.floor(TILE * 0.38));
     }
     ctx.fillStyle = P[3];
-    ctx.fillText('+' + parts[2] + '  SPACE lock', 40, 132);
+    ctx.font = FONT.sm + ' "Press Start 2P", monospace';
+    ctx.fillText('+' + parts[2] + '  SPACE lock', inset * 2, oy + oh - Math.floor(TILE * 0.35));
   }
 
   function drawYamlOverlay() {
     if (state.mode !== 'puzzleYaml') return;
     var id = YAML_ORDER[state.yamlPickIndex];
     var label = id === 'y_w3' ? 'Dave workaround?' : 'Comment ' + (state.yamlPickIndex + 1);
-    ctx.fillStyle = 'rgba(15,56,15,0.9)';
-    ctx.fillRect(16, 52, CANVAS_W - 32, 72);
+    var inset = Math.floor(TILE * 0.33);
+    var oy = Math.floor(TILE * 1.08);
+    var oh = Math.floor(TILE * 1.85);
+    ctx.fillStyle = OVERLAY_BG;
+    ctx.fillRect(inset, oy, CANVAS_W - inset * 2, oh);
     ctx.strokeStyle = P[2];
-    ctx.strokeRect(16, 52, CANVAS_W - 32, 72);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(inset, oy, CANVAS_W - inset * 2, oh);
     ctx.fillStyle = P[3];
-    ctx.font = '6px "Press Start 2P", monospace';
-    ctx.fillText('Which line to LEAVE?', 22, 68);
-    ctx.fillText('Pick: ' + label, 22, 84);
-    ctx.fillText('<- ->  SPACE', 22, 100);
+    ctx.font = FONT.sm + ' "Press Start 2P", monospace';
+    ctx.fillText('Leave this line alone:', inset * 2, oy + Math.floor(TILE * 0.55));
+    ctx.fillText(label, inset * 2, oy + Math.floor(TILE * 0.95));
+    ctx.fillStyle = P[2];
+    ctx.font = FONT.xs + ' "Press Start 2P", monospace';
+    ctx.fillText('<- -> then SPACE', inset * 2, oy + oh - Math.floor(TILE * 0.28));
   }
 
   function drawFinaleOverlay() {
     if (!state.finale || state.dialog.length > 0) return;
-    ctx.fillStyle = 'rgba(15,56,15,0.85)';
+    ctx.fillStyle = FINALE_DIM;
     ctx.fillRect(0, 0, CANVAS_W, GH * TILE);
     ctx.fillStyle = P[3];
-    ctx.font = '8px "Press Start 2P", monospace';
-    ctx.fillText('CI PEACE', 100, 80);
-    ctx.font = '6px "Press Start 2P", monospace';
-    ctx.fillText('Tap link below', 70, 120);
+    ctx.font = FONT.lg + ' "Press Start 2P", monospace';
+    ctx.fillText('CI PEACE', Math.floor(CANVAS_W * 0.28), Math.floor(TILE * 2.2));
+    ctx.font = FONT.sm + ' "Press Start 2P", monospace';
+    ctx.fillText('Tap link below', Math.floor(CANVAS_W * 0.18), Math.floor(TILE * 3.2));
   }
 
   function loop() {
