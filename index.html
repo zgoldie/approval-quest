@@ -23,6 +23,7 @@
     background: var(--bg);
     color: var(--green);
     font-family: 'Share Tech Mono', monospace;
+    text-shadow: 0 0 6px rgba(0, 255, 65, 0.35);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -61,6 +62,9 @@
   .terminal {
     width: 100%;
     max-width: 720px;
+    position: relative;
+    z-index: 1;
+    padding: 34px 28px 26px;
   }
 
   .title-block {
@@ -385,9 +389,9 @@ const nodes = {
       L('The goblin is silent for so long you suspect another full day has gone by.', 'dim'),
       L('A scroll appears before you.', 'bright'),
       L('SCROLL: The Chief saw a sign outside The Store, saying reviews take 24 hours.', 'amber'),
-      L('SCROLL: He asks if you are still alive and if so, what is taking so long.', 'amber'),
+      L('SCROLL: He asks if you are still alive and if so, what is taking so long?', 'amber'),
       G(),
-      L('The goblin gives a slow nod.', 'bright'),
+      L('The goblin gives a slow nod.', 'dim'),
       L('A content smile appears, as if it pleased with itself.', 'dim'),
       L('It steps aside and ushers you onward.', 'bright'),
     ],
@@ -475,21 +479,21 @@ const nodes = {
     progress: 4,
     lines: [
       L('CHAMBER IV — THE INNER SANCTUM', 'big'),
-      L('A young goblin lounges behind the desk, half-listening to something in one ear.', 'dim'),
+      L('A young goblin lounges behind the desk, gently humming to itself.', 'dim'),
       G(),
       L('It glances at your scroll for a heartbeat and stamps it.', 'bright'),
       L('The seal reads: APPROVED.', 'bright'),
-      L('No reason is given. It is already looking at the next pile.', 'dim'),
+      L('No reason is given. It is looking away, back to its humming.', 'dim'),
+      L('The gates of the store grind open.', 'dim'),
       G(),
-      L('SCROLL: The Fang Wizard seems unfamiliar with the process.', 'amber'),
+      L('SCROLL: The Fang Wizard seems unfamiliar with the Store of Applications process.', 'amber'),
       L('SCROLL: Can you train them?', 'amber'),
       G(),
-      L('The gates of the store grind open.', 'dim'),
       L('You permit yourself half a breath.', 'dim'),
     ],
     choices: [
-      { text: 'Thank the senior goblin. It does not look up.', next: 'ending', sanity: 0, slack: 0, days: 0 },
-      { text: 'Leave in silence. The lamps watch you go.', next: 'ending', sanity: 0, slack: 0, days: 0 },
+      { text: 'Thank the small goblin. It does not look up.', next: 'ending', sanity: 0, slack: 0, days: 0 },
+      { text: 'Leave in silence. The lamps flicker as you go.', next: 'ending', sanity: 0, slack: 0, days: 0 },
     ]
   },
 
@@ -500,11 +504,12 @@ const nodes = {
       G(),
       L('You re-emerge into daylight. You touch some grass.', 'dim'),
       L('A scroll arrives.', 'amber'),
-      L('"Good news. We worked on more changes while you were gone.', 'amber'),
-      L('Could you submit them to the Store of Applications tomorrow?"', 'amber'),
+      L('SCROLL:Good news. We worked on more changes while you were gone.', 'amber'),
+      L('SCROLL: Could you submit them to the Store of Applications tomorrow?', 'amber'),
+      L('SCROLL: The Fang Wizard thinks that you are best suited to the task.', 'amber'),
     ],
     choices: [
-      { text: '[ SKIP THE STORE USING CODEPUSH ]', next: 'intro', sanity: 0, slack: 0, days: 0, href: 'https://codemagic.io/codepush' },
+      { text: '[ SKIP THE STORE. USE CODEPUSH ]', next: 'intro', sanity: 0, slack: 0, days: 0, href: 'https://codemagic.io/codepush' },
       { text: '[ START AGAIN ]', next: 'intro', sanity: 0, slack: 0, days: 0 },
     ]
   }
