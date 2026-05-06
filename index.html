@@ -387,12 +387,11 @@ const nodes = {
     lines: [
       L('CHAMBER I — THE GATEKEEPERS', 'big'),
       L('The goblin is silent for so long you suspect another full day has gone by.', 'dim'),
-      L('A scroll appears before you.', 'bright'),
+      L('While you wait, a message scroll appears before you.', 'bright'),
       L('SCROLL: The Chief saw a sign outside The Store, saying reviews usually take 24 hours.', 'amber'),
       L('SCROLL: He asks if you are still alive and if so, what is taking so long?', 'amber'),
       G(),
-      L('The goblin gives a slow nod.', 'dim'),
-      L('A content smile appears, as if it pleased with itself.', 'dim'),
+      L('The goblin gives a slow nod, with a content smile', 'dim'),
       L('It steps aside and ushers you onward.', 'bright'),
     ],
     choices: [
@@ -409,22 +408,22 @@ const nodes = {
       G(),
       L('GOBLIN: Please present your iconography.', 'amber'),
  
-      L('You present your carefully prepared scroll.', 'bright'),
+      L('You give it your carefully prepared scroll.', 'bright'),
       G(),
       L('After gazing at the scroll for hours, it drops it on the floor.', 'dim'),
       L('GOBLIN: Denied. Does not meet requirements.', 'red'),
-      L('You wait for details. None appear.', 'dim'),
+      L('You wait for details. None are given.', 'dim'),
     ],
     choices: [
       { text: 'Check the thick tome beside the goblin.', next: 'chamber2_tome', sanity: -1, slack: 0, days: 0 },
-      { text: 'Cast Direct Magic to a fellow mage about rule changes.', next: 'chamber2_mage', sanity: -1, slack: 1, days: 0 },
+      { text: 'Send a message scroll to a fellow mage asking about rule changes.', next: 'chamber2_mage', sanity: -1, slack: 1, days: 0 },
     ]
   },
 
   chamber2_mage: {
     progress: 2,
     lines: [
-      L('Your Direct Magic flies out to a fellow mage.', 'dim'),
+      L('Your scroll flies out to a fellow mage.', 'dim'),
       L('A reply returns quickly: "Haven\'t heard anything. Sorry."', 'amber'),
       L('No one knows. The goblin does not elaborate.', 'dim'),
     ],
@@ -438,13 +437,13 @@ const nodes = {
     lines: [
       L('You open the thick tome beside the goblin.', 'dim'),
       L('The pages are dense, dry, and endless.', 'dim'),
-      L('After what feels like ages, you find a small note at the very back:', 'bright'),
+      L('You eventually find a small note near the very back:', 'bright'),
       L('TOME: Required scroll dimensions changed from 8 x 14" to 8 x 13.9".', 'amber'),
       L('This contradicts earlier instructions, but you try it anyway.', 'dim'),
       L('You take your knife, slice off a sliver of scroll, and resubmit.', 'dim'),
       L('A day later, it is accepted.', 'bright'),
       G(),
-      L('A scroll arrives from the Primary Messenger.', 'dim'),
+      L('A new message scroll arrives.', 'dim'),
       L('SCROLL: The Chief has hired a Fang Wizard and is very excited.', 'amber'),
       L('SCROLL: The Chief is sure that this will speed things up.', 'amber'),
     ],
