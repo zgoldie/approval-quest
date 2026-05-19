@@ -351,7 +351,7 @@ const nodes = {
       L('You announce yourself to the review goblin.', 'bright'),
       L('It holds perfectly still, only its eyes swivel towards you.', 'bright'),
       G(),
-      L('You announce "the password is Test Phrase"', 'dim'),
+      L('You declare "the password is Test Phrase"', 'dim'),
       G(),
       L('A day and a night pass.', 'amber', 1),
       L('No word is spoken. No signal is given.', 'dim'),
@@ -587,5 +587,9 @@ function restartGame() {
 
 restartGame();
 </script>
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
