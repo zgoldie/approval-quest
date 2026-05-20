@@ -273,6 +273,81 @@
     background: var(--green);
     box-shadow: 0 0 6px var(--green);
   }
+
+  .welcome {
+    text-align: center;
+    margin-top: 48px;
+  }
+
+  .welcome-prompt {
+    color: var(--green-dim);
+    font-size: 15px;
+    line-height: 1.8;
+    margin-bottom: 28px;
+  }
+
+  .start-btn {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    background: transparent;
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: 'VT323', monospace;
+    font-size: 32px;
+    letter-spacing: 4px;
+    padding: 16px 24px;
+    cursor: pointer;
+    text-shadow: 0 0 10px var(--green);
+    box-shadow: 0 0 16px var(--green-glow), inset 0 0 12px var(--green-glow);
+    touch-action: manipulation;
+    transition: all 0.1s;
+  }
+
+  .start-btn:hover {
+    color: #fff;
+    background: var(--green-glow);
+  }
+
+  .start-btn:active {
+    transform: scale(0.99);
+  }
+
+  .game[hidden] {
+    display: none;
+  }
+
+  .distract-panel {
+    margin-top: 20px;
+    text-align: center;
+  }
+
+  .distract-panel .share-url {
+    color: var(--green);
+    font-size: 13px;
+    word-break: break-all;
+    margin: 16px 0;
+    line-height: 1.6;
+  }
+
+  .distract-panel #qrcode {
+    display: inline-block;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid var(--green-dim);
+  }
+
+  .distract-panel #qrcode img {
+    display: block;
+  }
+
+  .distract-copy-hint {
+    color: var(--green-dim);
+    font-size: 13px;
+    min-height: 1.2em;
+    margin-top: 8px;
+  }
 </style>
 </head>
 <body>
@@ -283,11 +358,16 @@
     <div class="subtitle">a dungeon crawl through the Store of Applications</div>
   </div>
 
-  <div class="progress-track" id="progress-track"></div>
+  <div id="welcome" class="welcome">
+    <p class="welcome-prompt">Submit your scroll. Wait. Repeat.</p>
+    <button type="button" id="start-btn" class="start-btn">START</button>
+  </div>
 
-  <div class="output" id="output"></div>
-
-  <div id="choices" class="choices"></div>
+  <div id="game" class="game" hidden>
+    <div class="progress-track" id="progress-track"></div>
+    <div class="output" id="output"></div>
+    <div id="choices" class="choices"></div>
+  </div>
 
 </div>
 
@@ -444,7 +524,7 @@ const nodes = {
       L('A day later, it is accepted.', 'bright'),
       G(),
       L('A new message scroll arrives.', 'dim'),
-      L('SCROLL: The Chief has hired a Fang Wizard and is very excited.', 'amber'),
+      L('SCROLL: The Chief has hired an ex-Fang wizard and is very excited.', 'amber'),
       L('SCROLL: The Chief is sure that this will speed things up.', 'amber'),
     ],
     choices: [
@@ -464,9 +544,9 @@ const nodes = {
       G(),
       L('The corridor does not end. Your footsteps echo.', 'dim'),
       G(),
-      L('SCROLL: The Fang Wizard has a question about store keys.', 'amber'),
-      L('SCROLL: The Fang Wizard is stating this was someone else\'s responsibility at their last role.', 'amber'),
-      L('SCROLL: The Chief is still delighted that we\'ve hired a Fang Wizard.', 'amber'),
+      L('SCROLL: The new wizard has a question about store keys.', 'amber'),
+      L('SCROLL: The new wizard is stating this was someone else\'s responsibility at their last role.', 'amber'),
+      L('SCROLL: The Chief is still delighted that we\'ve hired the new wizard.', 'amber'),
     ],
     choices: [
       { text: 'Relay with guidance for the wizard. Perhaps it will help.', next: 'chamber4', sanity: -10, slack: 2, days: 5 },
@@ -485,7 +565,7 @@ const nodes = {
       L('No reason is given. It is looking away, back to its humming.', 'dim'),
       L('The gates of the store grind open.', 'dim'),
       G(),
-      L('SCROLL: The Fang Wizard seems unfamiliar with the Store of Applications process.', 'amber'),
+      L('SCROLL: The new wizard seems unfamiliar with the Store of Applications process.', 'amber'),
       L('SCROLL: Can you train them?', 'amber'),
       G(),
       L('You permit yourself half a breath.', 'dim'),
@@ -505,12 +585,23 @@ const nodes = {
       L('A scroll arrives.', 'bright'),
       L('SCROLL:Good news. We worked on more changes while you were gone.', 'amber'),
       L('SCROLL: Could you submit them to the Store of Applications tomorrow?', 'amber'),
-      L('SCROLL: The Fang Wizard thinks that you are best suited to the task.', 'amber'),
+      L('SCROLL: The new wizard thinks that you are best suited to the task.', 'amber'),
     ],
     choices: [
       { text: '[ SKIP THE STORE. USE CODEPUSH ]', next: 'intro', sanity: 0, slack: 0, days: 0, href: 'https://codemagic.io/codepush' },
-      { text: '[ START AGAIN ]', next: 'intro', sanity: 0, slack: 0, days: 0 },
+      { text: '[ DISTRACT A COLLEAGUE ]', next: 'distract', sanity: 0, slack: 0, days: 0 },
+      { text: '[ START AGAIN ]', next: 'welcome', sanity: 0, slack: 0, days: 0 },
     ]
+  },
+
+  distract: {
+    progress: 5,
+    lines: [
+      L('You angle the tablet toward a colleague.', 'dim'),
+      L('They can try it on their own device.', 'bright'),
+    ],
+    choices: [],
+    distract: true
   }
 
 };
@@ -552,6 +643,10 @@ function renderNode(nodeId) {
   });
 
   setTimeout(() => {
+    if (node.distract) {
+      showDistractPanel(choicesEl);
+      return;
+    }
     node.choices.forEach(choice => {
       const btn = document.createElement('button');
       btn.className = 'choice-btn';
@@ -570,11 +665,74 @@ function renderNode(nodeId) {
         state.sanity += choice.sanity || 0;
         state.slack += choice.slack || 0;
         updateStats();
-        setTimeout(() => renderNode(choice.next), CHOICE_PAUSE_MS);
+        setTimeout(() => {
+          if (choice.next === 'welcome') {
+            showWelcome();
+          } else {
+            renderNode(choice.next);
+          }
+        }, CHOICE_PAUSE_MS);
       };
       choicesEl.appendChild(btn);
     });
   }, maxDelay + 400);
+}
+
+function getShareUrl() {
+  return 'https://approval.quest';
+}
+
+function showDistractPanel(container) {
+  const url = getShareUrl();
+  const panel = document.createElement('div');
+  panel.className = 'distract-panel';
+
+  const qrHost = document.createElement('div');
+  qrHost.id = 'qrcode';
+  panel.appendChild(qrHost);
+
+  const urlEl = document.createElement('div');
+  urlEl.className = 'share-url';
+  urlEl.textContent = url;
+  panel.appendChild(urlEl);
+
+  const hint = document.createElement('div');
+  hint.className = 'distract-copy-hint';
+  panel.appendChild(hint);
+
+  container.appendChild(panel);
+
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(qrHost, {
+      text: url,
+      width: 180,
+      height: 180,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'choice-btn';
+  copyBtn.textContent = 'Copy URL';
+  copyBtn.onclick = () => {
+    const done = () => { hint.textContent = 'Copied.'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(() => {
+        hint.textContent = url;
+      });
+    } else {
+      hint.textContent = url;
+    }
+  };
+  container.appendChild(copyBtn);
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'choice-btn';
+  backBtn.textContent = '[ BACK ]';
+  backBtn.onclick = () => renderNode('ending');
+  container.appendChild(backBtn);
 }
 
 function restartGame() {
@@ -585,8 +743,28 @@ function restartGame() {
   updateStats();
 }
 
-restartGame();
+function showWelcome() {
+  state.day = 1;
+  state.sanity = 100;
+  state.slack = 0;
+  document.getElementById('welcome').hidden = false;
+  document.getElementById('game').hidden = true;
+  document.getElementById('output').innerHTML = '';
+  document.getElementById('choices').innerHTML = '';
+  document.getElementById('progress-track').innerHTML = '';
+  updateStats();
+}
+
+function startGame() {
+  document.getElementById('welcome').hidden = true;
+  document.getElementById('game').hidden = false;
+  restartGame();
+}
+
+document.getElementById('start-btn').onclick = startGame;
+showWelcome();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
 </script>
