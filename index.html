@@ -349,35 +349,75 @@
     display: none;
   }
 
-  .distract-panel {
-    margin-top: 20px;
-    text-align: center;
-  }
-
-  .distract-panel .share-url {
-    color: var(--green);
-    font-size: 13px;
-    word-break: break-all;
-    margin: 16px 0;
-    line-height: 1.6;
-  }
-
-  .distract-panel #qrcode {
-    display: inline-block;
-    padding: 12px;
-    background: #fff;
+  .share-block {
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px 18px;
     border: 1px solid var(--green-dim);
+    box-sizing: border-box;
   }
 
-  .distract-panel #qrcode img {
+  .share-block-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .share-block-copy {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .share-block-title {
+    font-family: 'VT323', monospace;
+    font-size: clamp(26px, 6vw, 34px);
+    color: var(--green);
+    letter-spacing: 1px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .share-block-hint {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--green-dim);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .share-block .share-url {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--green);
+    font-size: 14px;
+    margin-top: 6px;
+    line-height: 1.5;
+    word-break: break-all;
+  }
+
+  .share-block .share-qr {
+    flex-shrink: 0;
+    padding: 6px;
+    background: var(--bg);
+    border: 1px solid var(--green-dim);
+    line-height: 0;
+  }
+
+  .share-block .share-qr img,
+  .share-block .share-qr canvas {
     display: block;
   }
 
-  .distract-copy-hint {
-    color: var(--green-dim);
-    font-size: 13px;
-    min-height: 1.2em;
-    margin-top: 8px;
+  @media (max-width: 420px) {
+    .share-block-inner {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .share-block .share-qr {
+      align-self: center;
+    }
   }
 </style>
 </head>
@@ -438,11 +478,11 @@ const state = {
   node: 'intro'
 };
 
-const TOTAL_NODES = 6;
+const TOTAL_NODES = 4; /* one pip per chamber */
 const CHOICE_PAUSE_MS = 420;
 
 /** Default ms after each line (content, gap row, IN REVIEW., etc.). */
-const LINE_MS = 380;
+const LINE_MS = 650;
 
 /** Story line: `hold` adds extra LINE_MS pauses after this line. */
 function L(text, cls = '', hold = 0) {
@@ -506,13 +546,14 @@ const nodes = {
   },
 
   chamber1: {
-    progress: 1,
+    progress: 0,
     lines: [
       L('At last, the goblin speaks.', 'bright'),
       G(),
       L('THE GOBLIN: "Best Phrase" is invalid. Review denied.', 'red'),
-      L('You close your eyes for a brief and private moment.', 'dim'),
+      L('You briefly close your eyes.', 'dim'),
       G(),
+      L(`You're pretty certain you didn't stutter.`)
     ],
     choices: [
       { text: 'After a calming breath, repeat: "The password is Test Phrase."', next: 'gate_passed', sanity: -2, slack: 0, days: 1 },
@@ -521,15 +562,34 @@ const nodes = {
   },
 
   gate_passed: {
-    progress: 1,
+    progress: 0,
     lines: [
       L('The goblin is silent for so long you suspect another full day has gone by.', 'dim'),
       L('While you wait, a message scroll appears before you.', 'bright'),
+    ],
+    choices: [
+      { text: 'A scroll lands at your feet', next: 'gate_scroll', sanity: 0, slack: 0, days: 0 },
+    ]
+  },
+
+  gate_scroll: {
+    progress: 0,
+    lines: [
       L('SCROLL: The Chief saw a sign outside The Store, saying reviews usually take 24 hours.', 'amber'),
       L('SCROLL: He asks if you are still alive and if so, what is taking so long?', 'amber'),
-      G(),
+    ],
+    choices: [
+      { text: 'Tell them it is just the typical delays', next: 'gate_passed_after', sanity: 0, slack: 0, days: 0 },
+    ]
+  },
+
+  gate_passed_after: {
+    progress: 0,
+    lines: [
       L('The goblin gives a slow nod, with a content smile', 'dim'),
+      L('THE GOBLIN: "Test Phrase" is valid. Please proceed.', 'bright'),
       L('It steps aside and ushers you onward.', 'bright'),
+ 
     ],
     choices: [
       { text: 'Enter the next chamber.', next: 'chamber2', sanity: 1, slack: 0, days: 0 },
@@ -537,19 +597,23 @@ const nodes = {
   },
 
   chamber2: {
-    progress: 2,
+    progress: 1,
     lines: [
       L('CHAMBER II — THE HALL OF METADATA', 'big'),
-      L('You enter a new chamber, the walls are covered in colorful scrolls.', 'dim'),
+      L('You enter a new chamber, the walls are covered in colorful diagrams.', 'dim'),
       L('A new goblin bars the way. A familiar vacant gaze turns to you.', 'dim'),
       G(),
       L('GOBLIN: Please present your iconography.', 'amber'),
  
       L('You give it your carefully prepared scroll.', 'bright'),
       G(),
-      L('After gazing at the scroll for hours, it drops it on the floor.', 'dim'),
+      L('It gazes at the scroll for hours.', 'dim'),
+      L('It drops it to the floor.', 'dim'),
+      G(),
       L('GOBLIN: Denied. Does not meet requirements.', 'red'),
-      L('You wait for details. None are given.', 'dim'),
+      L('You wait for details.', 'dim'),
+      G(),
+      L('None are given.', 'dim'),
     ],
     choices: [
       { text: 'Check the thick tome beside the goblin.', next: 'chamber2_tome', sanity: -1, slack: 0, days: 0 },
@@ -558,7 +622,7 @@ const nodes = {
   },
 
   chamber2_mage: {
-    progress: 2,
+    progress: 1,
     lines: [
       L('Your scroll flies out to a fellow mage.', 'dim'),
       L('A reply returns quickly: "Haven\'t heard anything. Sorry."', 'amber'),
@@ -570,27 +634,38 @@ const nodes = {
   },
 
   chamber2_tome: {
-    progress: 2,
+    progress: 1,
     lines: [
       L('You open the thick tome beside the goblin.', 'dim'),
       L('The pages are dense, dry, and endless.', 'dim'),
       L('You eventually find a small note near the very back:', 'bright'),
       L('TOME: Required scroll dimensions changed from 8 x 14" to 8 x 13.9".', 'amber'),
       L('This contradicts earlier instructions, but you try it anyway.', 'dim'),
-      L('You take your knife, slice off a sliver of scroll, and resubmit.', 'dim'),
-      L('A day later, it is accepted.', 'bright'),
+      L('You take your knife and slice off a sliver of scroll.', 'dim'),
+      L('You resubmit this version.', 'dim'),
       G(),
-      L('A new message scroll arrives.', 'dim'),
+      L('You wait.', 'dim'),
+      G(),
+      L('GOBLIN: ACCEPTED, please proceed.', 'amber'),
+    ],
+    choices: [
+      { text: 'A new scroll arrives', next: 'chamber2_scroll', sanity: 0, slack: 0, days: 0 },
+    ]
+  },
+
+  chamber2_scroll: {
+    progress: 1,
+    lines: [
       L('SCROLL: The Chief has hired an ex-Fang wizard and is very excited.', 'amber'),
       L('SCROLL: The Chief is sure that this will speed things up.', 'amber'),
     ],
     choices: [
-      { text: 'Move to the next chamber.', next: 'chamber3', sanity: -4, slack: 0, days: 1 },
+      { text: 'Enter the next chamber', next: 'chamber3', sanity: -4, slack: 0, days: 1 },
     ]
   },
 
   chamber3: {
-    progress: 3,
+    progress: 2,
     lines: [
       L('CHAMBER III — THE WAITING CORRIDOR', 'big'),
       L('No goblins here. Only lamps on the wall.', 'dim'),
@@ -600,10 +675,19 @@ const nodes = {
       IR(), IR(),
       G(),
       L('The corridor does not end. Your footsteps echo.', 'dim'),
-      G(),
+    ],
+    choices: [
+      { text: 'A scroll skitters across the floor', next: 'chamber3_scroll', sanity: 0, slack: 0, days: 0 },
+    ]
+  },
+
+  chamber3_scroll: {
+    progress: 2,
+    lines: [
       L('SCROLL: The new wizard has a question about store keys.', 'amber'),
       L('SCROLL: The new wizard is stating this was someone else\'s responsibility at their last role.', 'amber'),
       L('SCROLL: The Chief is still delighted that we\'ve hired the new wizard.', 'amber'),
+      L('The corridor stretches on.', 'dim'),
     ],
     choices: [
       { text: 'Relay with guidance for the wizard. Perhaps it will help.', next: 'chamber4', sanity: -10, slack: 2, days: 5 },
@@ -612,53 +696,56 @@ const nodes = {
   },
 
   chamber4: {
-    progress: 4,
+    progress: 3,
     lines: [
       L('CHAMBER IV — THE INNER SANCTUM', 'big'),
-      L('A young goblin lounges behind the desk, gently humming to itself.', 'dim'),
+      L('You somehow find yourself no longer in the corridor', 'dim'),
+      L('A young goblin lounges behind a desk, gently humming to itself.', 'dim'),
       G(),
       L('It glances at your scroll for a heartbeat and stamps it.', 'bright'),
-      L('The seal reads: APPROVED.', 'bright'),
+      L('APPROVED.', 'bright'),
       L('No reason is given. It is looking away, back to its humming.', 'dim'),
       L('The gates of the store grind open.', 'dim'),
-      G(),
-      L('SCROLL: The new wizard seems unfamiliar with the Store of Applications process.', 'amber'),
-      L('SCROLL: Can you train them?', 'amber'),
-      G(),
-      L('You permit yourself half a breath.', 'dim'),
     ],
     choices: [
-      { text: 'Thank the small goblin. It does not look up.', next: 'ending', sanity: 0, slack: 0, days: 0 },
-      { text: 'Leave in silence. The lamps flicker as you go.', next: 'ending', sanity: 0, slack: 0, days: 0 },
+      { text: 'A scroll catches the light', next: 'chamber4_scroll', sanity: 0, slack: 0, days: 0 },
     ]
   },
 
-  ending: {
-    progress: 5,
+  chamber4_scroll: {
+    progress: 3,
+    lines: [
+      L('SCROLL: The new wizard seems unfamiliar with the Store of Applications process.', 'amber'),
+      L('SCROLL: Can you train them?', 'amber'),
+      L('You permit yourself half a breath.', 'dim'),
+    ],
+    choices: [
+      { text: 'Thank the small goblin. It does not look up.', next: 'ending_grass', sanity: 0, slack: 0, days: 0 },
+      { text: 'Leave in silence. The lamps flicker as you go.', next: 'ending_grass', sanity: 0, slack: 0, days: 0 },
+    ]
+  },
+
+  ending_grass: {
+    progress: 4,
+    ending: true,
+    share: true,
     lines: [
       L('APPROVED', 'big'),
       G(),
-      L('You re-emerge into daylight. You touch some grass.', 'dim'),
+      L('You re-emerge into daylight.', 'dim'),
+      G(),
+      L('You touch some grass.', 'dim'),
+      G(),
+ 
       L('A scroll arrives.', 'bright'),
-      L('SCROLL:Good news. We worked on more changes while you were gone.', 'amber'),
+      L('SCROLL: Good news. We completed more changes while you were gone.', 'amber'),
       L('SCROLL: Could you submit them to the Store of Applications tomorrow?', 'amber'),
       L('SCROLL: The new wizard thinks that you are best suited to the task.', 'amber'),
     ],
     choices: [
       { text: '[ SKIP THE STORE. USE CODEPUSH ]', next: 'intro', sanity: 0, slack: 0, days: 0, href: 'https://codemagic.io/codepush' },
-      { text: '[ DISTRACT A COLLEAGUE ]', next: 'distract', sanity: 0, slack: 0, days: 0 },
       { text: '[ START AGAIN ]', next: 'welcome', sanity: 0, slack: 0, days: 0 },
     ]
-  },
-
-  distract: {
-    progress: 5,
-    lines: [
-      L('You angle the tablet toward a colleague.', 'dim'),
-      L('They can try it on their own device.', 'bright'),
-    ],
-    choices: [],
-    distract: true
   }
 
 };
@@ -670,9 +757,12 @@ function updateStats() {
 function updateProgress(step) {
   const track = document.getElementById('progress-track');
   track.innerHTML = '';
+  const complete = step >= TOTAL_NODES;
   for (let i = 0; i < TOTAL_NODES; i++) {
     const pip = document.createElement('div');
-    pip.className = 'progress-pip' + (i < step ? ' done' : i === step ? ' current' : '');
+    if (complete || i < step) pip.className = 'progress-pip done';
+    else if (i === step) pip.className = 'progress-pip current';
+    else pip.className = 'progress-pip';
     track.appendChild(pip);
   }
 }
@@ -700,10 +790,6 @@ function renderNode(nodeId) {
   });
 
   setTimeout(() => {
-    if (node.distract) {
-      showDistractPanel(choicesEl);
-      return;
-    }
     node.choices.forEach(choice => {
       const btn = document.createElement('button');
       btn.className = 'choice-btn';
@@ -732,6 +818,9 @@ function renderNode(nodeId) {
       };
       choicesEl.appendChild(btn);
     });
+    if (node.share) {
+      showShareBlock(choicesEl);
+    }
   }, maxDelay + 400);
 }
 
@@ -739,57 +828,50 @@ function getShareUrl() {
   return 'https://approval.quest';
 }
 
-function showDistractPanel(container) {
+function showShareBlock(container) {
   const url = getShareUrl();
-  const panel = document.createElement('div');
-  panel.className = 'distract-panel';
+  const block = document.createElement('div');
+  block.className = 'share-block';
 
-  const qrHost = document.createElement('div');
-  qrHost.id = 'qrcode';
-  panel.appendChild(qrHost);
+  const inner = document.createElement('div');
+  inner.className = 'share-block-inner';
+
+  const copy = document.createElement('div');
+  copy.className = 'share-block-copy';
+
+  const title = document.createElement('div');
+  title.className = 'share-block-title';
+  title.textContent = 'Distract A Colleague';
+  copy.appendChild(title);
+
+  const hint = document.createElement('div');
+  hint.className = 'share-block-hint';
+  hint.textContent = 'Scan to open on your phone for sharing';
+  copy.appendChild(hint);
 
   const urlEl = document.createElement('div');
   urlEl.className = 'share-url';
   urlEl.textContent = url;
-  panel.appendChild(urlEl);
+  copy.appendChild(urlEl);
 
-  const hint = document.createElement('div');
-  hint.className = 'distract-copy-hint';
-  panel.appendChild(hint);
+  const qrHost = document.createElement('div');
+  qrHost.className = 'share-qr';
 
-  container.appendChild(panel);
+  inner.appendChild(copy);
+  inner.appendChild(qrHost);
+  block.appendChild(inner);
+  container.appendChild(block);
 
   if (typeof QRCode !== 'undefined') {
     new QRCode(qrHost, {
       text: url,
-      width: 180,
-      height: 180,
-      colorDark: '#000000',
-      colorLight: '#ffffff',
+      width: 128,
+      height: 128,
+      colorDark: '#00ff41',
+      colorLight: '#020f04',
       correctLevel: QRCode.CorrectLevel.M
     });
   }
-
-  const copyBtn = document.createElement('button');
-  copyBtn.className = 'choice-btn';
-  copyBtn.textContent = 'Copy URL';
-  copyBtn.onclick = () => {
-    const done = () => { hint.textContent = 'Copied.'; };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(done).catch(() => {
-        hint.textContent = url;
-      });
-    } else {
-      hint.textContent = url;
-    }
-  };
-  container.appendChild(copyBtn);
-
-  const backBtn = document.createElement('button');
-  backBtn.className = 'choice-btn';
-  backBtn.textContent = '[ BACK ]';
-  backBtn.onclick = () => renderNode('ending');
-  container.appendChild(backBtn);
 }
 
 function restartGame() {
