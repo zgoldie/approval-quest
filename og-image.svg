@@ -1,14 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Approval Quest">
-  <rect width="1200" height="630" fill="#020f04"/>
-  <rect width="1200" height="630" fill="url(#scan)" opacity="0.35"/>
   <defs>
     <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
       <rect width="4" height="2" fill="#000"/>
       <rect y="2" width="4" height="2" fill="transparent"/>
     </pattern>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="65%">
+      <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.75"/>
+    </radialGradient>
+    <filter id="green-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 1 0 0 0.25  0 0 0 0 0  0 0 0 1 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
-  <text x="600" y="280" text-anchor="middle" fill="#00ff41" font-family="ui-monospace, 'Courier New', monospace" font-size="108" font-weight="700" letter-spacing="6">APPROVAL</text>
-  <text x="600" y="400" text-anchor="middle" fill="#00ff41" font-family="ui-monospace, 'Courier New', monospace" font-size="108" font-weight="700" letter-spacing="6">QUEST</text>
-  <text x="600" y="500" text-anchor="middle" fill="#00aa2a" font-family="ui-monospace, 'Courier New', monospace" font-size="36" letter-spacing="2">A dungeon crawl through the Store of Applications</text>
-  <text x="600" y="560" text-anchor="middle" fill="#00aa2a" font-family="ui-monospace, 'Courier New', monospace" font-size="28">Submit your update. Wait. Repeat.</text>
+  <rect width="1200" height="630" fill="#020f04"/>
+  <g filter="url(#green-glow)" font-family="VT323, monospace" fill="#00ff41" text-anchor="middle">
+    <text x="600" y="250" font-size="132" letter-spacing="8">APPROVAL</text>
+    <text x="600" y="370" font-size="132" letter-spacing="8">QUEST</text>
+  </g>
+  <text x="600" y="470" text-anchor="middle" font-family="VT323, monospace" font-size="40" fill="#00aa2a" letter-spacing="2">A dungeon crawl through the Store of Applications</text>
+  <text x="600" y="530" text-anchor="middle" font-family="VT323, monospace" font-size="32" fill="#00aa2a" letter-spacing="1">Submit your update. Wait. Repeat.</text>
+  <rect width="1200" height="630" fill="url(#scan)" opacity="0.22"/>
+  <rect width="1200" height="630" fill="url(#vignette)"/>
 </svg>
