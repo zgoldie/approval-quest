@@ -577,6 +577,8 @@ const nodes = {
     lines: [
       L('SCROLL: The Chief saw a sign outside The Store, saying reviews usually take 24 hours.', 'amber'),
       L('SCROLL: He asks if you are still alive and if so, what is taking so long?', 'amber'),
+      L('SCROLL: If not, he wants to know if we should wait or send someone new.', 'amber'),
+
     ],
     choices: [
       { text: 'Tell them it is just the typical delays', next: 'gate_passed_after', sanity: 0, slack: 0, days: 0 },
@@ -588,7 +590,7 @@ const nodes = {
     lines: [
       L('The goblin gives a slow nod, with a content smile', 'dim'),
       L('THE GOBLIN: "Test Phrase" is valid. Please proceed.', 'bright'),
-      L('It steps aside and ushers you onward.', 'bright'),
+      L('It steps aside and ushers you onward.', 'dim'),
  
     ],
     choices: [
@@ -626,7 +628,10 @@ const nodes = {
     lines: [
       L('Your scroll flies out to a fellow mage.', 'dim'),
       L('A reply returns quickly: "Haven\'t heard anything. Sorry."', 'amber'),
-      L('No one knows. The goblin does not elaborate.', 'dim'),
+      L('No one knows.', 'dim'),
+      G(),
+      L('The goblin does not elaborate.', 'dim'),
+
     ],
     choices: [
       { text: 'Check the thick tome anyway.', next: 'chamber2_tome', sanity: -1, slack: 0, days: 0 },
@@ -642,11 +647,11 @@ const nodes = {
       L('TOME: Required scroll dimensions changed from 8 x 14" to 8 x 13.9".', 'amber'),
       L('This contradicts earlier instructions, but you try it anyway.', 'dim'),
       L('You take your knife and slice off a sliver of scroll.', 'dim'),
-      L('You resubmit this version.', 'dim'),
+      L('You resubmit this version.'),
       G(),
       L('You wait.', 'dim'),
       G(),
-      L('GOBLIN: ACCEPTED, please proceed.', 'amber'),
+      L('GOBLIN: ACCEPTED, please proceed.', 'bright'),
     ],
     choices: [
       { text: 'A new scroll arrives', next: 'chamber2_scroll', sanity: 0, slack: 0, days: 0 },
@@ -699,12 +704,14 @@ const nodes = {
     progress: 3,
     lines: [
       L('CHAMBER IV — THE INNER SANCTUM', 'big'),
-      L('You somehow find yourself no longer in the corridor', 'dim'),
+      L('You somehow find yourself in a new room.', 'dim'),
       L('A young goblin lounges behind a desk, gently humming to itself.', 'dim'),
       G(),
       L('It glances at your scroll for a heartbeat and stamps it.', 'bright'),
-      L('APPROVED.', 'bright'),
-      L('No reason is given. It is looking away, back to its humming.', 'dim'),
+      L('GOBLIN: APPROVED.', 'bright'),
+      L('No comment is given.', 'dim'),
+      L('It ignores you, continuing to hum.', 'dim'),
+      G(),
       L('The gates of the store grind open.', 'dim'),
     ],
     choices: [
@@ -743,7 +750,7 @@ const nodes = {
       L('SCROLL: The new wizard thinks that you are best suited to the task.', 'amber'),
     ],
     choices: [
-      { text: '[ SKIP THE STORE. USE CODEPUSH ]', next: 'intro', sanity: 0, slack: 0, days: 0, href: 'https://codemagic.io/codepush' },
+      { text: '[ SKIP THE STORE. USE CODEPUSH ]', next: 'intro', sanity: 0, slack: 0, days: 0, href: 'https://codemagic.io/codepush?utm_source=quest' },
       { text: '[ START AGAIN ]', next: 'welcome', sanity: 0, slack: 0, days: 0 },
     ]
   }
