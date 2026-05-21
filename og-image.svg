@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Approval Quest">
+  <rect width="1200" height="630" fill="#020f04"/>
+  <rect width="1200" height="630" fill="url(#scan)" opacity="0.35"/>
+  <defs>
+    <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="2" fill="#000"/>
+      <rect y="2" width="4" height="2" fill="transparent"/>
+    </pattern>
+  </defs>
+  <text x="600" y="280" text-anchor="middle" fill="#00ff41" font-family="ui-monospace, 'Courier New', monospace" font-size="108" font-weight="700" letter-spacing="6">APPROVAL</text>
+  <text x="600" y="400" text-anchor="middle" fill="#00ff41" font-family="ui-monospace, 'Courier New', monospace" font-size="108" font-weight="700" letter-spacing="6">QUEST</text>
+  <text x="600" y="500" text-anchor="middle" fill="#00aa2a" font-family="ui-monospace, 'Courier New', monospace" font-size="36" letter-spacing="2">A dungeon crawl through the Store of Applications</text>
+  <text x="600" y="560" text-anchor="middle" fill="#00aa2a" font-family="ui-monospace, 'Courier New', monospace" font-size="28">Submit your update. Wait. Repeat.</text>
+</svg>
