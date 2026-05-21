@@ -67,19 +67,47 @@
     padding: 34px 28px 26px;
   }
 
+  .game-title {
+    font-family: 'VT323', monospace;
+    text-align: center;
+    margin: 0 auto 20px;
+    animation: flicker 8s infinite;
+  }
+
+  .game-title-line {
+    font-size: clamp(52px, 14vw, 80px);
+    line-height: 0.92;
+    color: var(--green);
+    text-shadow: 0 0 12px var(--green), 0 0 24px var(--green-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  .game-title-line + .game-title-line {
+    margin-top: -0.04em;
+  }
+
+  /* ASCII title alts (Doom / Standard) — see HTML comments on welcome screen */
   .ascii-title {
     font-family: 'VT323', monospace;
-    font-size: clamp(12px, 3.4vw, 17px);
-    line-height: 1.05;
+    font-size: clamp(11px, 2.9vw, 16px);
+    line-height: 1.08;
     color: var(--green);
     text-shadow: 0 0 12px var(--green), 0 0 24px var(--green-dim);
     margin: 0 auto 16px;
     padding: 0 4px;
+    width: max-content;
     max-width: 100%;
     overflow-x: auto;
     white-space: pre;
-    text-align: center;
+    text-align: left;
     animation: flicker 8s infinite;
+  }
+
+  .ascii-title code {
+    font: inherit;
+    color: inherit;
   }
 
   .welcome-subtitle {
@@ -357,12 +385,40 @@
 <div class="terminal">
 
   <div id="welcome" class="welcome">
-    <pre class="ascii-title" aria-label="Approval Quest">    _   ___ ___ ___  _____   ___   _       ___  _   _ ___ ___ _____
-   /_\ | _ \ _ \ _ \/ _ \ \ / /_\ | |     / _ \| | | | __/ __|_   _|
-  / _ \|  _/  _/   / (_) \ V / _ \| |__  | (_) | |_| | _|\__ \ | |
- /_/ \_\_| |_| |_|_\\___/ \_/_/ \_\____|  \__\_\\___/|___|___/ |_|</pre>
-    <p class="welcome-subtitle">a dungeon crawl through the Store of Applications</p>
-    <p class="welcome-prompt">Submit your scroll. Wait. Repeat.</p>
+    <div class="game-title" aria-label="Approval Quest">
+      <p class="game-title-line">Approval</p>
+      <p class="game-title-line">Quest</p>
+    </div>
+    <!-- ASCII alts — swap with .game-title to compare:
+    Doom:
+    <pre class="ascii-title" aria-label="Approval Quest"><code>  ___  __________________ _____  _   _  ___   _
+ / _ \ | ___ \ ___ \ ___ \  _  || | | |/ _ \ | |
+/ /_\ \| |_/ / |_/ / |_/ / | | || | | / /_\ \| |
+|  _  ||  __/|  __/|    /| | | || | | |  _  || |
+| | | || |   | |   | |\ \\ \_/ /\ \_/ / | | || |____
+\_| |_/\_|   \_|   \_| \_|\___/  \___/\_| |_/\_____|
+
+ _____ _   _ _____ _____ _____
+|  _  | | | |  ___/  ___|_   _|
+| | | | | | | |__ \ `--.  | |
+| | | | | | |  __| `--. \ | |
+\ \/' / |_| | |___/\__/ / | |
+ \_/\_\\___/\____/\____/  \_/</code></pre>
+    Standard stacked:
+    <pre class="ascii-title" aria-label="Approval Quest"><code>     _    ____  ____  ____   _____     ___    _
+    / \  |  _ \|  _ \|  _ \ / _ \ \   / / \  | |
+   / _ \ | |_) | |_) | |_) | | | \ \ / / _ \ | |
+  / ___ \|  __/|  __/|  _ <| |_| |\ V / ___ \| |___
+ /_/   \_\_|   |_|   |_| \_\\___/  \_/_/   \_\_____|
+
+   ___  _   _ _____ ____ _____
+  / _ \| | | | ____/ ___|_   _|
+ | | | | | | |  _| \___ \ | |
+ | |_| | |_| | |___ ___) || |
+  \__\_\\___/|_____|____/ |_|</code></pre>
+    -->
+    <p class="welcome-subtitle">A dungeon crawl through the Store of Applications</p>
+    <p class="welcome-prompt">Submit your update. Wait. Repeat.</p>
     <button type="button" id="start-btn" class="start-btn">START</button>
   </div>
 
