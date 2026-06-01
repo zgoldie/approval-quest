@@ -546,7 +546,7 @@ const nodes = {
       L('You announce yourself to the review goblin.', 'bright'),
       L('It holds perfectly still, only its eyes swivel towards you.', 'bright'),
       G(),
-      L('You declare "the password is Test Phrase"', 'dim'),
+      L('You declare "the password is Dog Barking"', 'dim'),
       G(),
       L('A day and a night pass.', 'amber', 1),
       L('No word is spoken. No signal is given.', 'dim'),
@@ -566,14 +566,14 @@ const nodes = {
     lines: [
       L('At last, the goblin speaks.', 'bright'),
       G(),
-      L('THE GOBLIN: "Best Phrase" is invalid. Review denied.', 'red'),
+      L('THE GOBLIN: "Frog Barking" is invalid. Review denied.', 'red'),
       L('You briefly close your eyes.', 'dim'),
       G(),
       L(`You're pretty certain you didn't stutter.`)
     ],
     choices: [
-      { text: 'After a calming breath, repeat: "The password is Test Phrase."', next: 'gate_passed', sanity: -2, slack: 0, days: 1 },
-      { text: 'Repeat, slower and louder: "The password. Is. TEST. PHRASE."', next: 'gate_passed', sanity: -1, slack: 0, days: 1 },
+      { text: 'After a calming breath, repeat: "The password is Dog Barking."', next: 'gate_passed', sanity: -2, slack: 0, days: 1 },
+      { text: 'Repeat, slower and louder: "The password. Is. DOG. BARKING."', next: 'gate_passed', sanity: -1, slack: 0, days: 1 },
     ]
   },
 
@@ -605,7 +605,7 @@ const nodes = {
     progress: 0,
     lines: [
       L('The goblin gives a slow nod, with a content smile', 'dim'),
-      L('THE GOBLIN: "Test Phrase" is valid. Please proceed.', 'bright'),
+      L('THE GOBLIN: "Dog Barking" is valid. Please proceed.', 'bright'),
       L('It steps aside and ushers you onward.', 'dim'),
  
     ],
